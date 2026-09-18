@@ -26,8 +26,8 @@ export = ["onnx>=1.16", "onnxruntime>=1.18", "coremltools>=8.0"]
 dev = ["pytest>=8.0", "ruff>=0.5"]
 
 [project.urls]
-Homepage = "https://github.com/YOUR-USERNAME/tiny-model-lab"
-Issues = "https://github.com/YOUR-USERNAME/tiny-model-lab/issues"
+Homepage = "https://github.com/melissa-pereira-deel/tiny-model-lab"
+Issues = "https://github.com/melissa-pereira-deel/tiny-model-lab/issues"
 
 [tool.setuptools]
 packages = ["harness"]

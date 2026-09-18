@@ -13,7 +13,7 @@ evaluate, gate, record. And it ends with the outcome nobody plans for and
 everybody eventually gets — **the baseline wins, so the baseline ships.**
 
 That is not a failed example. It is the single most valuable thing this harness
-does. Without a baseline gate you would have looked at 0.86 accuracy, felt good,
+does. Without a baseline gate you would have looked at 0.92 accuracy, felt good,
 and shipped a model that was worse than four lines of `if` statements.
 
 ## What to look at

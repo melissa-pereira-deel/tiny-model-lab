@@ -1,5 +1,8 @@
 # tiny-model-lab
 
+[![ci](https://github.com/melissa-pereira-deel/tiny-model-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/melissa-pereira-deel/tiny-model-lab/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A Claude Code harness for researching, training, and embedding **tiny models** —
 the kilobyte-to-few-megabyte kind that run locally in a browser or on a device
 and do exactly one narrow thing.
@@ -33,7 +36,7 @@ to the baseline, because the baseline ships without weights.
 ## Try it in one second
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/tiny-model-lab
+git clone https://github.com/melissa-pereira-deel/tiny-model-lab
 cd tiny-model-lab
 pip install -e .
 python examples/01-hello-tiny/run.py
@@ -43,11 +46,27 @@ No ML dependencies, no GPU, runs instantly. It ends with the outcome nobody
 plans for and everyone eventually gets:
 
 ```
-[FAIL] baseline: candidate accuracy=0.9200 vs deterministic baseline=1.0000
+baseline 'rule classifier (isspace/isdigit/isalnum/else)': 1.0000 on held-out
+
+... two earlier evals elided; the third and last reads:
+
+--- eval: n=4000 ---
+[FAIL] baseline: candidate accuracy=0.9200 vs deterministic baseline 'rule classifier (isspace/isdigit/isalnum/else)'=1.0000 (higher is better)
+       → The baseline still wins. Do NOT tune hyperparameters yet — that is the expensive way to discover a scoping error. In order: (1) improve the input representation, which is where most tiny-model gains live; (2) check label quality on 20 disagreements by hand; (3) if neither moves it, write this up as a negative result and ship the baseline.
 [PASS] size: artifact 0.1 KB vs budget 5.0 KB
 [PASS] latency: p95 0.0 ms vs 'instant' band ceiling 100 ms
+[PASS] patience: last 2 evals ['0.9200', '0.9200'] vs best-before 0.9040
+[PASS] wallclock: 0.0 min elapsed vs cap 5 min
+
+accuracy / size / latency curve:
+variant           acc    size KB    p95 ms
+lookup-250     0.9040        0.1       0.0
+lookup-1000    0.9200        0.1       0.0
+lookup-4000    0.9200        0.1       0.0
 
 Outcome: the deterministic baseline wins, so the baseline ships.
+That is a successful run. The harness cost you one second to learn it
+instead of a week, and the reasoning is now in the run manifest.
 ```
 
 That's a **successful** run. Without the baseline gate you'd have seen 0.92,
