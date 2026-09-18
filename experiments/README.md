@@ -5,8 +5,10 @@ One YAML per scoped task. `/scope` writes them here from
 a training script while this directory holds no `*.yaml`.
 
 These files are **committed**. They are the contract — the named baseline, its
-measured number, the budgets, and the kill criteria you wrote down before you
-were invested. Corpora and checkpoints stay gitignored; the reasoning does not.
+measured number (or `measured_at_runtime: true`, a promise that a runner supplies
+it and that the baseline gate enforces), the budgets, and the kill criteria you
+wrote down before you were invested. Corpora and checkpoints stay gitignored; the
+reasoning does not.
 
 A refusal is also a result. If `/scope` decides the task belongs on a lower rung
 of the ladder, write that down here too — a short `<slug>-refused.md` naming the

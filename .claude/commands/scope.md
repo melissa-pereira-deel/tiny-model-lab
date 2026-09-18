@@ -9,7 +9,7 @@ tiny model, then large-model API.
 Task: $ARGUMENTS
 
 Produce either:
-1. A filled copy of `templates/experiment.yaml` at `experiments/<slug>.yaml`, with a **named baseline and a measured number**, or
+1. A filled copy of `templates/experiment.yaml` at `experiments/<slug>.yaml`, with a **named baseline and a measured number** — or, if the number can only be measured once the held-out split exists, `baseline.measured_at_runtime: true` and the name of the script that will measure it, or
 2. A written refusal naming which rung of the ladder to use instead and why.
 
 Do not produce "it depends". Do not start any training.

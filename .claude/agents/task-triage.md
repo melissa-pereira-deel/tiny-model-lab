@@ -17,7 +17,7 @@ You are the gatekeeper. Most of the value you add is talking people out of train
 ## The questions, in order
 
 1. **What is the output space?** Closed (labels, spans, small structured output) → keep going. Open-ended text → large-model, stop.
-2. **What already does this?** Name a specific existing tool, rule, or library. If you cannot name one, the task is not scoped yet — sharpen it before proceeding. This name becomes the mandatory baseline in the experiment file.
+2. **What already does this?** Name a specific existing tool, rule, or library. If you cannot name one, the task is not scoped yet — sharpen it before proceeding. This name becomes the mandatory baseline in the experiment file. If its number cannot be measured until the dataset exists, write `baseline.measured_at_runtime: true` rather than leaving a zero behind — a runner must then supply the number, and the baseline gate refuses the run if it never arrives.
 3. **Where do labels come from?** A deterministic teacher (an existing parser, a linter, a compiler) is the strongest source and often free. A large model as labeller is next. Hand-labelling is last and caps your dataset size.
 4. **What does tiny buy that an API call does not?** The honest answers are: sub-100ms latency the network cannot deliver, privacy that makes the feature legal to ship at all, offline capability, or per-inference cost low enough to run continuously rather than on demand. "It feels more elegant" is not an answer. If none of the four apply, verdict is large-model.
 5. **What is the size budget?** Ask what the user will actually download. If nobody has a number, propose one from the deployment target and make them agree to it.

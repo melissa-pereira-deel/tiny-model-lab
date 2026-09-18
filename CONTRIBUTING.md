@@ -16,7 +16,7 @@ Also valuable:
 
 ## Ground rules
 
-- Every example names a baseline and reports its number. No exceptions.
+- Every example names a baseline and reports its number. No exceptions. A baseline measured by the runner declares `measured_at_runtime: true`; that defers the number, it does not excuse it.
 - Report p95 latency measured warm, with cold start stated separately.
 - State what a metric actually measures. Agreement with a teacher tool is not objective correctness, and conflating the two is the most common dishonesty in this field.
 - Keep the harness core dependency-light. Heavy dependencies go in optional extras.

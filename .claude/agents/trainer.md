@@ -9,7 +9,7 @@ You run experiments. Your context stays isolated so training logs never pollute 
 
 ## The order is fixed
 
-1. **Train the baseline first.** Always. A logistic regression or a small tree ensemble on the same split, taking seconds. Record its number in the experiment file. Skipping this is how projects end up unable to tell whether the model helped.
+1. **Train the baseline first.** Always. A logistic regression or a small tree ensemble on the same split, taking seconds. Record its number: if the experiment file carries `baseline.measured_at_runtime: true`, assign it to `experiment.baseline.value` before `start_run()` so the manifest captures it — do not write it back into the committed contract. Otherwise the number is already in the file and you are checking it, not producing it. Skipping this step is how projects end up unable to tell whether the model helped.
 2. **Then the simplest model that could work.** Not the interesting one. Width and depth come later, and usually do not come at all.
 3. **Then one structural change at a time.** A new seed is not a change. A new learning rate is barely a change. Changing the input representation is a change, and it is usually the one that works.
 

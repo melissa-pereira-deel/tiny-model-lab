@@ -94,7 +94,9 @@ that means for whether the snap needs a visible transition.
   refusal, never a survey of options.
 - **Don't ask to skip the baseline.** The trainer measures it first, and
   `.claude/hooks/guard-experiment.sh` blocks training when no experiment file
-  exists at all.
+  exists at all. A baseline the runner measures is declared with
+  `measured_at_runtime: true`, and `baseline_gate` refuses the run if the number
+  never arrives.
 - **Don't ask to tune hyperparameters after a baseline failure.** The gate's own
   remediation tells the agent to fix the representation first; asking for a
   learning-rate sweep puts you in an argument with the harness.

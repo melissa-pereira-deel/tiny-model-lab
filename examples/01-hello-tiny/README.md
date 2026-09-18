@@ -18,7 +18,7 @@ and shipped a model that was worse than four lines of `if` statements.
 
 ## What to look at
 
-- `experiment.yaml` — the contract, including `kill_criteria` written before any training
+- `experiment.yaml` — the contract, including `kill_criteria` written before any training, and `measured_at_runtime: true` because `run.py` measures the baseline on the held-out split rather than hard-coding it
 - the gate output — note that `baseline` fails while `size` and `latency` pass; a model can pass every technical budget and still be the wrong thing to ship
 - `runs/<timestamp>--*/manifest.json` — the provenance trail that survives the session
 - the accuracy/size/latency table — the real deliverable of a tiny-model project is the curve, not a single number

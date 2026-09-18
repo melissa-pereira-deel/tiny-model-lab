@@ -16,7 +16,10 @@ baseline:
   kind: deterministic      # deterministic | classical | existing_tool | previous_run
   name: ""                 # e.g. "regex tagger v3", "sklearn LogisticRegression"
   metric: accuracy         # whatever you will actually compare
-  value: 0.0               # MEASURE THIS FIRST. Zero means you have not.
+  value: 0.0                  # MEASURE THIS FIRST. Zero means you have not.
+  measured_at_runtime: false  # true = a runner assigns value before start_run().
+                              # Not an escape hatch: the baseline gate refuses a
+                              # run whose number never arrived.
   notes: ""
 
 budgets:

@@ -6,8 +6,8 @@ Run the experiment defined at: $ARGUMENTS
 
 Delegate to the `trainer` subagent. Enforce this order:
 
-1. Verify the experiment file parses (`python -m harness.validate <path>`).
-2. Train and record the **baseline** if it has no measured number yet.
+1. Verify the experiment file (`python -m harness.validate <path>`). A file whose baseline is measured by the runner must say `measured_at_runtime: true`; validate accepts that, and the baseline gate later refuses a number that never arrives.
+2. Measure and record the **baseline** before anything else is trained.
 3. `start_run()` to create the run directory and manifest.
 4. Train the simplest model that could work.
 5. After every eval: `record_eval()`, then run the gates.

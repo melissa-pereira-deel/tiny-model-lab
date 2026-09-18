@@ -34,8 +34,17 @@ explicit, visible decision. `tests/test_guard_hook.py` holds it to that.
 
 **Don't write `baseline.value: 0.0` and move on.** `harness/validate.py` rejects
 it by name: *"measure the baseline before training the model, otherwise the
-comparison is decoration."* If zero really is the measured value, set it at
-runtime the way the worked example does.
+comparison is decoration."* If a runner measures it — the way
+`examples/01-hello-tiny/run.py` assigns `exp.baseline.value` before `start_run()`
+— say so with `baseline.measured_at_runtime: true`.
+
+**Don't treat `measured_at_runtime` as a way out.** It is a declaration that the
+number arrives later, not permission to skip it. `baseline_gate` in
+`harness/gates.py` refuses any run whose baseline still reads 0.0 when the gates
+run, before it computes the comparison at all — because a 0.0 baseline is one
+every candidate "beats", which is precisely the false result this harness exists
+to prevent. If your measurement genuinely is 0.0, state the metric in the
+direction where it isn't: accuracy 1.0, not error 0.0.
 
 **Don't look for a `kind: none` baseline.** `Baseline.VALID_KINDS` in
 `harness/experiment.py` allows `deterministic`, `classical`, `existing_tool`,
