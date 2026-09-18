@@ -9,6 +9,7 @@ thing" cost you an explicit edit to a file.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -17,8 +18,35 @@ from typing import Any
 
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-RUNS_DIR = REPO_ROOT / "runs"
+
+def project_root() -> Path:
+    """Where this project's `runs/`, `champion/` and ledger live.
+
+    Resolved per call rather than at import, because the old constant was
+    `Path(__file__).parent.parent` — the *installed package's* parent. Under a
+    normal `pip install` that is site-packages, so the harness wrote your run
+    history into site-packages and the only adoption model that worked was
+    cloning the repo and living inside it.
+
+    Order: an explicit argument wherever one is offered, then
+    TINY_MODEL_LAB_ROOT, then the nearest ancestor of the working directory
+    holding an `experiments/` directory — the thing `/scope` creates — then the
+    working directory itself. Inside a clone every route lands on the clone, so
+    nothing about the existing repo changes.
+    """
+    env = os.environ.get("TINY_MODEL_LAB_ROOT")
+    if env:
+        return Path(env).expanduser().resolve()
+    start = Path.cwd().resolve()
+    for candidate in (start, *start.parents):
+        if (candidate / "experiments").is_dir():
+            return candidate
+    return start
+
+
+def runs_root() -> Path:
+    return project_root() / "runs"
+
 
 # Nielsen's response-time limits (Miller 1968; Nielsen, Usability Engineering,
 # 1993). These are perceptual facts about humans, not engineering targets, which
@@ -123,7 +151,7 @@ def _git_sha() -> str:
     try:
         return subprocess.check_output(
             ["git", "rev-parse", "--short", "HEAD"],
-            cwd=REPO_ROOT,
+            cwd=project_root(),
             stderr=subprocess.DEVNULL,
             text=True,
         ).strip()
@@ -137,7 +165,7 @@ def start_run(experiment: Experiment, runs_dir: Path | None = None) -> Path:
     Corpora and checkpoints are gitignored; the manifest is not. What gets
     committed is the decision trail, not the artifacts.
     """
-    runs_dir = runs_dir or RUNS_DIR
+    runs_dir = Path(runs_dir) if runs_dir else runs_root()
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     slug = "".join(c if c.isalnum() or c in "-_" else "-" for c in experiment.task)[:48]
     run_dir = runs_dir / f"{stamp}--{slug}"

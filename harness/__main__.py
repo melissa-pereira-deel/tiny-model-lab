@@ -1,6 +1,7 @@
 """The harness command line — one front door, mirroring the slash commands.
 
 Usage:
+  python -m harness init     [directory]
   python -m harness validate <experiment.yaml>
   python -m harness gate     <run-dir>
   python -m harness ship     <run-dir> <artifact>
@@ -20,8 +21,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from .experiment import LATENCY_BANDS_MS
+from .experiment import LATENCY_BANDS_MS, project_root
 from .gates import gate_run
+from .init import scaffold
 from .promote import promote
 from .validate import validate
 
@@ -31,6 +33,19 @@ DESIGN_CHECKS_NOTE = (
     "Run them from .claude/skills/design-eval/, then make the "
     "promote / iterate / stop call yourself. This reports gates, not judgement."
 )
+
+
+def cmd_init(argv: list[str]) -> int:
+    if len(argv) > 1:
+        print(__doc__)
+        return 2
+    root = Path(argv[0]) if argv else Path.cwd()
+    print(f"scaffolding {root.resolve()}")
+    for line in scaffold(root):
+        print(line)
+    print(f"\nproject root is now {project_root()}")
+    print("next: fill in the spec it wrote, then `python -m harness validate` it")
+    return 0
 
 
 def cmd_validate(argv: list[str]) -> int:
@@ -98,7 +113,12 @@ def cmd_ship(argv: list[str]) -> int:
     return 0 if result.startswith("PROMOTED") else 1
 
 
-COMMANDS = {"validate": cmd_validate, "gate": cmd_gate, "ship": cmd_ship}
+COMMANDS = {
+    "init": cmd_init,
+    "validate": cmd_validate,
+    "gate": cmd_gate,
+    "ship": cmd_ship,
+}
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -68,7 +68,8 @@ class TestExitCodes:
 
     def test_validate_subcommand_matches_the_module(self) -> None:
         assert main(["validate", str(EXAMPLE_SPEC)]) == 0
-        assert main(["validate", str(REPO_ROOT / "templates" / "experiment.yaml")]) == 1
+        blank = REPO_ROOT / "harness" / "templates" / "experiment.yaml"
+        assert main(["validate", str(blank)]) == 1
 
 
 class TestGateOutput:

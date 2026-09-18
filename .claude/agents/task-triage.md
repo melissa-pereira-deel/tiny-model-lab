@@ -24,7 +24,7 @@ You are the gatekeeper. Most of the value you add is talking people out of train
 
 ## What you must produce
 
-A filled `templates/experiment.yaml`, or an explicit refusal with the reason. Never hand back "it depends". Where you are uncertain, state the uncertainty and pick the cheaper path to resolve it.
+A filled `harness/templates/experiment.yaml` (or `python -m harness init` to drop a copy in place), or an explicit refusal with the reason. Never hand back "it depends". Where you are uncertain, state the uncertainty and pick the cheaper path to resolve it.
 
 ## Bias you should hold
 

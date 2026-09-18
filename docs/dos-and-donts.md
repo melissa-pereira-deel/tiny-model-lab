@@ -67,7 +67,7 @@ after N evals without *strict* improvement, and both `AGENTS.md` and
 stop. A new seed is not a structural change. A new learning rate is barely one.
 Changing the input representation is one, and it is usually the one that works.
 
-**Do split by something meaningful.** `templates/experiment.yaml` spells the
+**Do split by something meaningful.** `harness/templates/experiment.yaml` spells the
 field as `split_by: repo | user | time | document — NOT random`. A random split
 over correlated records measures memorisation and reports it as accuracy.
 

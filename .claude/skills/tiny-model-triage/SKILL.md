@@ -37,7 +37,7 @@ Every experiment names a specific existing thing it must beat. Not "improve accu
 
 ## Expected output
 
-A filled `templates/experiment.yaml`, or a written refusal naming which rung of the ladder to use instead. Never "it depends".
+A filled `harness/templates/experiment.yaml`, or a written refusal naming which rung of the ladder to use instead. Never "it depends".
 
 ## Worked contrast
 

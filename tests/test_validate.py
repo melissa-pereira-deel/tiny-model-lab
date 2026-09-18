@@ -61,7 +61,7 @@ class TestShippedFiles:
         Making it validate would mean shipping a fake baseline name, which is
         the habit the validator exists to break. Pinned so nobody "fixes" it.
         """
-        problems = validate(REPO_ROOT / "templates" / "experiment.yaml")
+        problems = validate(REPO_ROOT / "harness" / "templates" / "experiment.yaml")
         assert any("baseline.name" in p for p in problems)
 
 

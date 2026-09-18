@@ -25,12 +25,23 @@ train = ["torch>=2.2", "numpy>=1.26", "scikit-learn>=1.4"]
 export = ["onnx>=1.16", "onnxruntime>=1.18", "coremltools>=8.0"]
 dev = ["pytest>=8.0", "ruff>=0.5"]
 
+[project.scripts]
+# Sugar. `python -m harness <cmd>` is the documented form because it needs no
+# reinstall and works straight out of a clone.
+tml = "harness.__main__:main"
+
 [project.urls]
 Homepage = "https://github.com/melissa-pereira-deel/tiny-model-lab"
 Issues = "https://github.com/melissa-pereira-deel/tiny-model-lab/issues"
 
 [tool.setuptools]
 packages = ["harness"]
+
+# The templates ship with the package. Without this, `pip install` gave you the
+# gates and none of the contract to fill in, so `harness init` had nothing to
+# copy and cloning was the only adoption path that worked.
+[tool.setuptools.package-data]
+harness = ["templates/*"]
 
 [tool.ruff]
 line-length = 100

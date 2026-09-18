@@ -1,7 +1,7 @@
 # experiments/
 
 One YAML per scoped task. `/scope` writes them here from
-`templates/experiment.yaml`; `.claude/hooks/guard-experiment.sh` refuses to run
+`harness/templates/experiment.yaml`; `.claude/hooks/guard-experiment.sh` refuses to run
 a training script while this directory holds no `*.yaml`.
 
 These files are **committed**. They are the contract — the named baseline, its

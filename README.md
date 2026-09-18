@@ -85,7 +85,8 @@ harness/       experiment specs, gates, profiling, promotion — plain Python
 docs/          concepts (analogy-first), harness design, stop conditions,
                do's and don'ts, how to prompt the agent
 examples/      worked, runnable
-templates/     experiment.yaml, MODEL_CARD.md
+harness/       experiment specs, gates, profiling, promotion, CLI
+               plus templates/ (experiment.yaml, MODEL_CARD.md) so they ship
 ```
 
 Two pages worth reading before you start:

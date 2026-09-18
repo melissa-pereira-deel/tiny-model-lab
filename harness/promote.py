@@ -13,19 +13,33 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .experiment import REPO_ROOT, eval_history, load_run
+from .experiment import eval_history, load_run, project_root
 from .gates import run_all
 
-CHAMPION_DIR = REPO_ROOT / "champion"
-LEDGER = REPO_ROOT / "runs" / "LEDGER.md"
+
+def champion_dir_for(champion_dir: Path | None = None) -> Path:
+    """`champion/` in this project, unless a caller names somewhere else.
+
+    The override exists so a test can exercise promotion without writing into
+    the working tree. Before it, the only branch a test could reach was the
+    refusal — the code that actually mutates champion/ and the ledger had never
+    once been executed.
+    """
+    return Path(champion_dir) if champion_dir else project_root() / "champion"
 
 
-def _load_champion() -> dict | None:
-    card = CHAMPION_DIR / "champion.json"
+def ledger_for(ledger: Path | None = None) -> Path:
+    return Path(ledger) if ledger else project_root() / "runs" / "LEDGER.md"
+
+
+def _load_champion(champion_dir: Path | None = None) -> dict | None:
+    card = champion_dir_for(champion_dir) / "champion.json"
     return json.loads(card.read_text()) if card.exists() else None
 
 
-def evaluate_promotion(run_dir: Path, *, higher_is_better: bool = True) -> tuple[bool, str]:
+def evaluate_promotion(
+    run_dir: Path, *, higher_is_better: bool = True, champion_dir: Path | None = None
+) -> tuple[bool, str]:
     """Decide whether a finished run should become the champion.
 
     Two conditions, both required:
@@ -54,7 +68,7 @@ def evaluate_promotion(run_dir: Path, *, higher_is_better: bool = True) -> tuple
     if not passed:
         return False, f"gates failed:\n{report}"
 
-    champ = _load_champion()
+    champ = _load_champion(champion_dir)
     if champ is not None:
         prev = champ["metric_value"]
         better = final["metric_value"] > prev if higher_is_better else final["metric_value"] < prev
@@ -67,15 +81,27 @@ def evaluate_promotion(run_dir: Path, *, higher_is_better: bool = True) -> tuple
     return True, f"promotable:\n{report}"
 
 
-def promote(run_dir: Path, artifact: Path, *, higher_is_better: bool = True) -> str:
-    ok, reason = evaluate_promotion(run_dir, higher_is_better=higher_is_better)
+def promote(
+    run_dir: Path,
+    artifact: Path,
+    *,
+    higher_is_better: bool = True,
+    champion_dir: Path | None = None,
+    ledger: Path | None = None,
+) -> str:
+    ok, reason = evaluate_promotion(
+        run_dir, higher_is_better=higher_is_better, champion_dir=champion_dir
+    )
     if not ok:
         return f"REFUSED — {reason}"
 
-    manifest = json.loads((run_dir / "manifest.json").read_text())
+    champ_dir = champion_dir_for(champion_dir)
+    ledger_path = ledger_for(ledger)
+
+    manifest, _ = load_run(run_dir)
     final = manifest["evals"][-1]
-    CHAMPION_DIR.mkdir(exist_ok=True)
-    dest = CHAMPION_DIR / artifact.name
+    champ_dir.mkdir(parents=True, exist_ok=True)
+    dest = champ_dir / artifact.name
     if artifact.is_dir():
         shutil.rmtree(dest, ignore_errors=True)
         shutil.copytree(artifact, dest)
@@ -94,12 +120,14 @@ def promote(run_dir: Path, artifact: Path, *, higher_is_better: bool = True) -> 
         "p95_ms": final["p95_ms"],
         "beats_baseline": manifest["experiment"]["baseline"]["name"],
     }
-    (CHAMPION_DIR / "champion.json").write_text(json.dumps(card, indent=2))
+    (champ_dir / "champion.json").write_text(json.dumps(card, indent=2))
 
-    LEDGER.parent.mkdir(exist_ok=True)
-    if not LEDGER.exists():
-        LEDGER.write_text("# Promotion ledger\n\nAppend-only. Every champion, in order.\n\n")
-    with LEDGER.open("a") as fh:
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    if not ledger_path.exists():
+        ledger_path.write_text(
+            "# Promotion ledger\n\nAppend-only. Every champion, in order.\n\n"
+        )
+    with ledger_path.open("a") as fh:
         fh.write(
             f"- `{card['promoted_at']}` **{card['task']}** — "
             f"{card['metric']}={card['metric_value']:.4f}, "
