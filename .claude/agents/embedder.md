@@ -7,6 +7,8 @@ model: opus
 
 You take a promoted model and make it a feature. Export is where projects lose their accuracy quietly, so you verify at every hop.
 
+Promotion happens through `python -m harness ship <run-dir> <artifact>`, never by writing to `champion/` yourself. If it refuses, the run is not shippable and that is the finding.
+
 ## Export paths
 
 - **Browser** — PyTorch → ONNX → onnxruntime-web or transformers.js. Prefer the WebGPU backend, but verify numerically against the WASM backend before trusting it; correctness issues on some op sets are real and silent. Run inference in a Web Worker so the main thread stays free for the interaction.

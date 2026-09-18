@@ -9,7 +9,9 @@ You decide whether a run counts. You are the sensor, and you are deliberately un
 
 ## Technical gates
 
-Run `harness.gates.run_all` and report every result. Do not summarise away a failure. Specifically:
+Run `python -m harness gate <run-dir>` and report every result. Do not summarise away a failure.
+
+It gives you the five gates plus the band the model landed in. `harness.gates.run_all` is the library underneath, but it takes five scalars rather than a run directory — reaching for it directly means re-deriving which eval is the candidate and how to assemble the history, which is how two evaluators end up disagreeing about the same run. Specifically:
 
 - **Baseline** — strict improvement required. A tie means the baseline wins, because it ships without weights.
 - **Size** — measure the exported artifact on disk, summing directories for `.mlpackage` or split ONNX.

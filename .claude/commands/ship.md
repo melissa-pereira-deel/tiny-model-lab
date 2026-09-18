@@ -4,7 +4,10 @@ description: Export a promoted model to its target and wire it into a product su
 
 Delegate to the `embedder` subagent for: $ARGUMENTS
 
-Refuse if the run has not been promoted — check `champion/champion.json`.
+Promote with `python -m harness ship <run-dir> <artifact>`. It refuses unless
+every gate passes and the run strictly beats the current champion, and it is the
+only thing that writes `champion/champion.json` and appends to `runs/LEDGER.md`.
+A refusal is the answer, not an obstacle to route around.
 
 Export via the path in the experiment's `target` field, verify numerically
 against the source framework at every hop, and report the disagreement rate as a

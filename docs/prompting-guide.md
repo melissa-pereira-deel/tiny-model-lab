@@ -21,6 +21,20 @@ The subagents run with isolated context, which is the point: training logs and
 dataset dumps stay out of your main conversation, and what comes back is the
 verdict and the numbers.
 
+Three of the four have a command-line equivalent, which is what the subagent
+actually calls:
+
+```bash
+python -m harness init                      # scaffold a project
+python -m harness validate <experiment.yaml>
+python -m harness gate     <run-dir>
+python -m harness ship     <run-dir> <artifact>
+```
+
+You can use those without Claude Code at all. What you lose is the triage
+conversation, the isolated context, and the guard that refuses training when no
+experiment file exists — not the gates themselves.
+
 ## Name the target and the constraint in the `/scope` prompt
 
 `task-triage` asks five questions before it will produce anything. Two of them
