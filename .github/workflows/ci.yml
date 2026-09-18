@@ -21,6 +21,14 @@ jobs:
           for f in templates/experiment.yaml examples/*/experiment.yaml; do
             python -c "import yaml,sys; yaml.safe_load(open('$f'))"
           done
+      - name: Every committed experiment passes validate
+        run: |
+          shopt -s nullglob
+          status=0
+          for f in examples/*/experiment.yaml experiments/*.yaml; do
+            python -m harness.validate "$f" || status=1
+          done
+          exit $status
       - name: Worked example runs
         run: python examples/01-hello-tiny/run.py
       - run: ruff check .
