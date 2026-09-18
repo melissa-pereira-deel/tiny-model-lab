@@ -12,8 +12,8 @@ it what to do instead of guessing.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 from .experiment import Experiment
 
@@ -127,7 +127,7 @@ def patience_gate(experiment: Experiment, eval_history: Sequence[float],
         name="patience",
         passed=improved,
         detail=(
-            f"last {patience} evals {['%.4f' % v for v in recent]} vs "
+            f"last {patience} evals {[f'{v:.4f}' for v in recent]} vs "
             f"best-before {best_before:.4f}"
         ),
         remediation=(

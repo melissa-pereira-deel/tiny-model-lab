@@ -87,7 +87,7 @@ class Experiment:
     tags: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "Experiment":
+    def from_yaml(cls, path: str | Path) -> Experiment:
         raw = yaml.safe_load(Path(path).read_text())
         return cls(
             task=raw["task"],
@@ -113,7 +113,7 @@ def _git_sha() -> str:
             stderr=subprocess.DEVNULL,
             text=True,
         ).strip()
-    except Exception:
+    except Exception:  # noqa: BLE001 - no git, no repo, shallow checkout: all fine
         return "unknown"
 
 

@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from harness.experiment import Experiment, record_eval, finish_run, start_run
+from harness.experiment import Experiment, finish_run, record_eval, start_run
 from harness.gates import run_all
 from harness.profile import latency_ms, summarize, tradeoff_row
 
@@ -83,7 +83,7 @@ class ToyModel:
     def __init__(self) -> None:
         self.table: dict[str, str] = {}
 
-    def fit(self, rows: list[tuple[str, str]]) -> "ToyModel":
+    def fit(self, rows: list[tuple[str, str]]) -> ToyModel:
         counts: dict[str, dict[str, int]] = {}
         for s, label in rows:
             key = s[0] if s else ""
@@ -126,7 +126,7 @@ def main() -> int:
     for n in (250, 1000, 4000):
         model = ToyModel().fit(train[:n])
         acc = accuracy(model.predict, holdout)
-        timing = latency_ms(lambda: model.predict("hello"), warmup=5, iterations=200)
+        timing = latency_ms(lambda m=model: m.predict("hello"), warmup=5, iterations=200)
         history.append(acc)
 
         record_eval(

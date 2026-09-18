@@ -8,7 +8,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from .experiment import Experiment, LATENCY_BANDS_MS
+from .experiment import LATENCY_BANDS_MS, Experiment
 
 
 def validate(path: str | Path) -> list[str]:

@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import statistics
 import time
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Callable, Sequence
 
 
 def artifact_size_kb(path: str | Path) -> float:
