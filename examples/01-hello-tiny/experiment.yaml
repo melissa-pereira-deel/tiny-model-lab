@@ -1,0 +1,43 @@
+task: "Classify a short string as word / number / symbol / whitespace"
+
+hypothesis: >-
+  A learned lookup over the first character can match four hand-written rules
+  on held-out strings while generalising to character classes the rules miss.
+
+baseline:
+  kind: deterministic
+  name: "rule classifier (isspace/isdigit/isalnum/else)"
+  metric: accuracy
+  value: 0.0        # measured at runtime by run.py
+  notes: "Zero bytes shipped, zero training, runs in nanoseconds."
+
+budgets:
+  max_size_kb: 5
+  latency_band: instant
+  max_latency_ms: null
+  max_wallclock_minutes: 5
+  patience_evals: 2
+
+target: onnx-web
+
+dataset:
+  source: "deterministic teacher"
+  teacher: "Python str methods"
+  split_by: "document"
+  size: 4000
+  holdout_size: 1000
+
+architecture:
+  family: linear
+  why: >-
+    The task is decided by the character class of the first character, so a
+    lookup captures the entire structure. Anything larger is decoration.
+  representation: >-
+    First character of the string. Deliberately impoverished, to show that
+    representation choice is what caps a tiny model's ceiling.
+
+kill_criteria:
+  - "Baseline still wins after two structural changes to the representation"
+  - "Cannot fit 5KB without dropping below baseline accuracy"
+
+tags: [example, tutorial]

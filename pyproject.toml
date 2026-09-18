@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tiny-model-lab"
+version = "0.1.0"
+description = "A Claude Code harness for researching, training, and embedding tiny task-specific models"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Melissa Pereira" }]
+keywords = ["tiny-models", "on-device", "edge-ai", "design-engineering", "claude-code", "harness"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+# The harness core is deliberately dependency-light so the gates run anywhere.
+train = ["torch>=2.2", "numpy>=1.26", "scikit-learn>=1.4"]
+export = ["onnx>=1.16", "onnxruntime>=1.18", "coremltools>=8.0"]
+dev = ["pytest>=8.0", "ruff>=0.5"]
+
+[project.urls]
+Homepage = "https://github.com/YOUR-USERNAME/tiny-model-lab"
+Issues = "https://github.com/YOUR-USERNAME/tiny-model-lab/issues"
+
+[tool.setuptools]
+packages = ["harness"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

@@ -1,0 +1,53 @@
+# An experiment is a contract you sign before training.
+# Fill this in completely. The harness refuses runs with missing pieces —
+# that refusal is the feature.
+
+task: >-
+  One line. What narrow thing does this model do?
+
+hypothesis: >-
+  A falsifiable sentence. "A 30KB conv net over character-class features can
+  match the rule-based tagger within 2 points while working on unseen formats."
+  Not "a small model might help here."
+
+# The thing you must beat. There is no "none" option: if you cannot name
+# something simpler that already does this job, the task is not scoped yet.
+baseline:
+  kind: deterministic      # deterministic | classical | existing_tool | previous_run
+  name: ""                 # e.g. "regex tagger v3", "sklearn LogisticRegression"
+  metric: accuracy         # whatever you will actually compare
+  value: 0.0               # MEASURE THIS FIRST. Zero means you have not.
+  notes: ""
+
+budgets:
+  max_size_kb: 50          # bytes the user downloads, not parameter count
+  latency_band: instant    # instant (100ms) | flow (1s) | attention (10s)
+  max_latency_ms: null     # null = the band's ceiling
+  max_wallclock_minutes: 600
+  patience_evals: 5        # evals without strict improvement before stopping
+
+target: onnx-web           # onnx-web | coreml | tflite | wgsl | mlx-local
+
+dataset:
+  source: ""               # deterministic teacher | large-model | hand
+  teacher: ""              # the tool or model producing labels
+  split_by: ""             # repo | user | time | document — NOT random
+  size: 0
+  holdout_size: 0
+
+architecture:
+  family: ""               # linear | trees | cnn | gru | transformer
+  why: >-
+    Which structure in the data justifies this? Locality, order, symmetry?
+    "It is what people use" is not a reason.
+  representation: >-
+    What does the input look like after preprocessing? This matters more than
+    the architecture. Spend your thinking here.
+
+# Conditions that end this project, written down before you are invested.
+kill_criteria:
+  - "Baseline still wins after two structural changes to the representation"
+  - "Cannot fit the size budget without dropping below baseline accuracy"
+  - "p95 latency stays above the band ceiling after quantization"
+
+tags: []
