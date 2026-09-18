@@ -8,7 +8,8 @@ baseline:
   kind: deterministic
   name: "rule classifier (isspace/isdigit/isalnum/else)"
   metric: accuracy
-  value: 0.0        # measured at runtime by run.py
+  value: 0.0        # run.py measures this on the held-out split before start_run()
+  measured_at_runtime: true
   notes: "Zero bytes shipped, zero training, runs in nanoseconds."
 
 budgets:

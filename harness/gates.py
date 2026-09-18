@@ -43,6 +43,24 @@ def baseline_gate(
     silent failure modes.
     """
     b = experiment.baseline
+    if b.measured_at_runtime and b.value == 0.0:
+        return GateResult(
+            name="baseline",
+            passed=False,
+            detail=(
+                f"{b.kind} baseline '{b.name}' is declared measured-at-runtime but "
+                f"{b.metric} is still 0.0"
+            ),
+            remediation=(
+                "The number never arrived, so there is nothing to beat and every "
+                "candidate 'wins' — the exact comparison this harness exists to "
+                "prevent. Measure the baseline on the held-out split and assign it "
+                "to experiment.baseline.value before start_run(), the way "
+                "examples/01-hello-tiny/run.py does. If the measurement genuinely is "
+                "0.0, state the metric in the direction where it is not — accuracy "
+                "1.0, not error 0.0 — so the gate has something to compare."
+            ),
+        )
     beat = candidate_value > b.value if higher_is_better else candidate_value < b.value
     direction = "higher" if higher_is_better else "lower"
     detail = (

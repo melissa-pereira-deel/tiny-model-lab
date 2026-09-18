@@ -64,6 +64,11 @@ class Baseline:
     metric: str
     value: float
     notes: str = ""
+    # A runner may measure the baseline and assign `value` before start_run().
+    # Saying so here is a declaration, not an exemption: baseline_gate refuses a
+    # run whose number never arrived, so the flag cannot manufacture a zero
+    # baseline that everything beats.
+    measured_at_runtime: bool = False
 
     VALID_KINDS = ("deterministic", "classical", "existing_tool", "previous_run")
 

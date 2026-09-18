@@ -18,11 +18,13 @@ def validate(path: str | Path) -> list[str]:
     except Exception as err:  # noqa: BLE001 - surfacing the message is the point
         return [f"could not parse: {err}"]
 
-    if exp.baseline.value == 0.0:
+    if exp.baseline.value == 0.0 and not exp.baseline.measured_at_runtime:
         problems.append(
             "baseline.value is 0.0 — measure the baseline before training the model, "
-            "otherwise the comparison is decoration. (If 0.0 is genuinely the measured "
-            "value, set it from a script at runtime as examples/01-hello-tiny does.)"
+            "otherwise the comparison is decoration. If a runner measures it and "
+            "assigns it before start_run(), as examples/01-hello-tiny/run.py does, "
+            "declare that with baseline.measured_at_runtime: true. That is not a way "
+            "out: the baseline gate refuses any run whose number never arrived."
         )
     if not exp.baseline.name.strip():
         problems.append("baseline.name is empty — name the specific thing you must beat")

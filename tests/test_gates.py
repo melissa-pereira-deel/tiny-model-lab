@@ -1,5 +1,7 @@
 """Tests for the gates. These encode the rules the harness is actually for."""
 
+from dataclasses import asdict
+
 import pytest
 
 from harness.experiment import Baseline, Budgets, Experiment
@@ -25,6 +27,7 @@ def make_experiment(**overrides) -> Experiment:
         name="regex tagger",
         metric="accuracy",
         value=overrides.pop("baseline_value", 0.90),
+        measured_at_runtime=overrides.pop("measured_at_runtime", False),
     )
     return Experiment(
         task="test task",
@@ -59,6 +62,28 @@ class TestBaselineGate:
         assert result.remediation
         # The remediation must steer away from the expensive wrong move.
         assert "representation" in result.remediation
+
+    def test_unmeasured_runtime_baseline_refuses(self):
+        """A declared-but-unmeasured baseline must not let everything through.
+
+        `measured_at_runtime` lets a contract ship without the number so a runner
+        can supply it. If the number never arrives the value is still 0.0, and
+        every candidate 'beats' it — the comparison this harness exists to
+        prevent. The flag is a declaration, not an exemption.
+        """
+        exp = make_experiment(baseline_value=0.0, measured_at_runtime=True)
+        assert not baseline_gate(exp, 0.95).passed
+
+    def test_unmeasured_refusal_explains_itself(self):
+        exp = make_experiment(baseline_value=0.0, measured_at_runtime=True)
+        result = baseline_gate(exp, 0.95)
+        assert "measure" in result.remediation.lower()
+
+    def test_measured_runtime_baseline_gates_normally(self):
+        """Once the number arrives the flag changes nothing — including the tie."""
+        exp = make_experiment(baseline_value=0.90, measured_at_runtime=True)
+        assert not baseline_gate(exp, 0.90).passed
+        assert baseline_gate(exp, 0.91).passed
 
 
 class TestSizeGate:
@@ -155,3 +180,30 @@ class TestBaselineValidation:
         """If you cannot name something simpler, the task is not scoped yet."""
         with pytest.raises(ValueError):
             Baseline(kind="none", name="", metric="accuracy", value=0.0)
+
+    def test_rehydrates_from_a_manifest_without_the_flag(self):
+        """harness/promote.py:42 rebuilds a Baseline from manifest JSON.
+
+        Manifests written before `measured_at_runtime` existed have no such key,
+        and must keep their original gate behaviour rather than raising.
+        """
+        old_manifest_baseline = {
+            "kind": "deterministic",
+            "name": "regex tagger",
+            "metric": "accuracy",
+            "value": 0.5,
+            "notes": "",
+        }
+        b = Baseline(**old_manifest_baseline)
+        assert b.measured_at_runtime is False
+
+    def test_roundtrips_through_asdict(self):
+        """Whatever to_dict() writes, Baseline(**...) must accept back."""
+        b = Baseline(
+            kind="deterministic",
+            name="regex tagger",
+            metric="accuracy",
+            value=0.5,
+            measured_at_runtime=True,
+        )
+        assert Baseline(**asdict(b)) == b
