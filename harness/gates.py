@@ -14,8 +14,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
-from .experiment import Experiment
+from .experiment import LATENCY_BANDS_MS, Experiment, eval_history, load_run
 
 
 @dataclass
@@ -194,3 +196,51 @@ def run_all(
         wallclock_gate(experiment, elapsed_minutes),
     ]
     return all(r.passed for r in results), results
+
+
+def band_landed_in(p95_ms: float) -> str | None:
+    """The narrowest band this latency actually fits, or None if it fits none.
+
+    Distinct from the band the experiment *declared*, which is what
+    `latency_gate` reports. A model budgeted for 'instant' that measures 400 ms
+    landed in 'flow', and that is a fact about the interaction you can now
+    design for — the fix is the UI, not the model.
+    """
+    for band, ceiling in sorted(LATENCY_BANDS_MS.items(), key=lambda kv: kv[1]):
+        if p95_ms <= ceiling:
+            return band
+    return None
+
+
+def gate_run(run_dir: str | Path) -> tuple[bool, list[GateResult], dict[str, Any]]:
+    """Run every gate against a finished or in-progress run directory.
+
+    The library half of `python -m harness gate`. Returns the verdict, the gate
+    results, and a small dict of context the CLI prints — so the reading of a
+    manifest happens in one place rather than in whatever code each caller
+    improvises.
+    """
+    manifest, exp = load_run(run_dir)
+    evals = manifest.get("evals", [])
+    if not evals:
+        raise ValueError(f"{run_dir}: no evaluations recorded, so there is nothing to gate")
+
+    final = evals[-1]
+    passed, results = run_all(
+        exp,
+        candidate_value=final["metric_value"],
+        size_kb=final["size_kb"],
+        p95_ms=final["p95_ms"],
+        eval_history=eval_history(manifest),
+        elapsed_minutes=final.get("elapsed_minutes", 0.0),
+    )
+    context = {
+        "run_id": manifest["run_id"],
+        "task": exp.task,
+        "evals": len(evals),
+        "variant": final.get("variant", "unnamed"),
+        "p95_ms": final["p95_ms"],
+        "declared_band": exp.budgets.latency_band,
+        "landed_band": band_landed_in(final["p95_ms"]),
+    }
+    return passed, results, context

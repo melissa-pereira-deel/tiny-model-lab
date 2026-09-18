@@ -13,7 +13,7 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .experiment import REPO_ROOT, Experiment
+from .experiment import REPO_ROOT, eval_history, load_run
 from .gates import run_all
 
 CHAMPION_DIR = REPO_ROOT / "champion"
@@ -32,24 +32,14 @@ def evaluate_promotion(run_dir: Path, *, higher_is_better: bool = True) -> tuple
       1. every gate passes (baseline, size, latency, patience, wallclock)
       2. it strictly improves on the current champion's held-out metric
     """
-    from .experiment import Baseline, Budgets
-
-    manifest = json.loads((run_dir / "manifest.json").read_text())
-    e = manifest["experiment"]
-    exp = Experiment(
-        task=e["task"],
-        hypothesis=e["hypothesis"],
-        baseline=Baseline(**e["baseline"]),
-        budgets=Budgets(**e["budgets"]),
-        target=e.get("target", "onnx-web"),
-    )
+    manifest, exp = load_run(run_dir)
 
     evals = manifest.get("evals", [])
     if not evals:
         return False, "no evaluations recorded — nothing to promote"
 
     final = evals[-1]
-    history = [ev["metric_value"] for ev in evals if "metric_value" in ev]
+    history = eval_history(manifest)
 
     passed, results = run_all(
         exp,

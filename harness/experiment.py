@@ -92,8 +92,13 @@ class Experiment:
     tags: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> Experiment:
-        raw = yaml.safe_load(Path(path).read_text())
+    def from_dict(cls, raw: dict[str, Any]) -> Experiment:
+        """The inverse of `to_dict`. Lossless on purpose.
+
+        A run manifest is the only record that survives the session, so reading
+        one back has to return the whole contract — including `kill_criteria`,
+        which is what tells you a project should end rather than a run.
+        """
         return cls(
             task=raw["task"],
             hypothesis=raw["hypothesis"],
@@ -105,6 +110,10 @@ class Experiment:
             kill_criteria=raw.get("kill_criteria", []),
             tags=raw.get("tags", []),
         )
+
+    @classmethod
+    def from_yaml(cls, path: str | Path) -> Experiment:
+        return cls.from_dict(yaml.safe_load(Path(path).read_text()))
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -163,3 +172,39 @@ def finish_run(run_dir: Path, status: str, reason: str = "") -> None:
     manifest["stopped_reason"] = reason
     manifest["finished_at"] = datetime.now(timezone.utc).isoformat()
     manifest_path.write_text(json.dumps(manifest, indent=2))
+
+
+# Gate metrics every eval must carry. `record_eval` takes **metrics and validates
+# nothing, so a runner that forgets one of these writes a manifest that only
+# fails later, inside whatever code improvised its own reading.
+REQUIRED_EVAL_KEYS = ("metric_value", "size_kb", "p95_ms")
+
+
+def load_run(run_dir: str | Path) -> tuple[dict[str, Any], Experiment]:
+    """Read a run manifest back into (manifest, Experiment).
+
+    The reader lives beside the writers — `start_run`, `record_eval` and
+    `finish_run` — because the format has exactly one owner. Every caller that
+    loads a run by hand is a chance for two callers to disagree about which eval
+    is "the" candidate, and the gates are supposed to be the part you can trust.
+    """
+    run_dir = Path(run_dir)
+    manifest_path = run_dir / "manifest.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"no manifest.json in {run_dir} — is that a run directory?")
+
+    manifest = json.loads(manifest_path.read_text())
+    for eval_index, ev in enumerate(manifest.get("evals", [])):
+        missing = [k for k in REQUIRED_EVAL_KEYS if k not in ev]
+        if missing:
+            raise KeyError(
+                f"{manifest_path}: eval {eval_index} is missing {', '.join(missing)}. "
+                "record_eval() accepts any keyword, so a runner has to pass every "
+                f"gate metric itself: {', '.join(REQUIRED_EVAL_KEYS)}."
+            )
+    return manifest, Experiment.from_dict(manifest["experiment"])
+
+
+def eval_history(manifest: dict[str, Any]) -> list[float]:
+    """Every recorded metric value, oldest first — what the patience gate reads."""
+    return [ev["metric_value"] for ev in manifest.get("evals", [])]

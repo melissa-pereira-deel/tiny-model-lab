@@ -182,7 +182,7 @@ class TestBaselineValidation:
             Baseline(kind="none", name="", metric="accuracy", value=0.0)
 
     def test_rehydrates_from_a_manifest_without_the_flag(self):
-        """harness/promote.py:42 rebuilds a Baseline from manifest JSON.
+        """Experiment.from_dict rebuilds a Baseline from manifest JSON.
 
         Manifests written before `measured_at_runtime` existed have no such key,
         and must keep their original gate behaviour rather than raising.
