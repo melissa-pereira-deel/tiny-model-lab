@@ -1,0 +1,81 @@
+name: Bug report
+description: Something in the harness, the guard, the subagents, or the docs is wrong or broken.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Corrections count as bugs here. If a claim in the docs is wrong or has
+        gone stale, that is worth filing — a harness that argues for honest
+        measurement should be held to it.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part
+      options:
+        - harness/ (gates, experiment, profile, promote, validate)
+        - .claude/hooks/ (the training guard, the session log)
+        - .claude/agents/ (task-triage, data-builder, trainer, evaluator, embedder)
+        - .claude/skills/
+        - .claude/commands/ (/scope, /experiment, /gate, /ship)
+        - examples/
+        - docs or README (including a claim that is wrong or stale)
+        - packaging / CI
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: The exact command, and its output.
+      render: shell
+      placeholder: |
+        $ python examples/01-hello-tiny/run.py
+        ...
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Python version and OS
+      description: The harness core supports Python 3.10+; CI runs 3.10 and 3.12.
+      placeholder: "3.12.4, macOS 15.1 (Apple silicon)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: checks
+    attributes:
+      label: Output of the checks
+      description: >-
+        Run these from the repo root and paste anything that fails. If they all
+        pass but your case still breaks, say so — that is useful on its own.
+      render: shell
+      value: |
+        pytest -q
+        ruff check .
+        python examples/01-hello-tiny/run.py
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: gate_integrity
+    attributes:
+      label: One check before you file
+      options:
+        - label: >-
+            This is not a request to weaken the baseline gate. The comparison is
+            a strict inequality on purpose — a tie ships the baseline, which has
+            no weights, no training pipeline, and no silent failure modes.
+          required: true

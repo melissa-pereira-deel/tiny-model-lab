@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Worked example or export-path note
+    url: https://github.com/melissa-pereira-deel/tiny-model-lab/blob/main/CONTRIBUTING.md
+    about: Examples that train and export a real model, and Core ML / MLX / WebGPU gotchas, are wanted as pull requests rather than issues.

@@ -1,0 +1,105 @@
+name: Negative result
+description: You trained something and the baseline won. This is the most useful issue you can file here.
+title: "[negative result] "
+labels: ["negative-result"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repo's premise is that most tasks should not be models. The
+        evidence for that claim is thin because nobody publishes it — so a
+        documented "I trained this, the baseline won, here's why" is worth more
+        than another architecture.
+
+        You do not need a tidy story. A run that stopped at a kill criterion is
+        a complete result.
+
+  - type: input
+    id: task
+    attributes:
+      label: The task
+      description: One line. What narrow thing was the model supposed to do?
+      placeholder: Classify a code token as keyword / identifier / literal / comment
+    validations:
+      required: true
+
+  - type: input
+    id: baseline
+    attributes:
+      label: The baseline, named
+      description: >-
+        The specific existing thing it had to beat — not "a simple approach".
+        A parser, a regex set, a library, a previous run.
+      placeholder: "Pygments lexer, exact-match on token type"
+    validations:
+      required: true
+
+  - type: input
+    id: numbers
+    attributes:
+      label: Baseline number vs model number
+      description: Same metric, same held-out split. State the metric.
+      placeholder: "accuracy — baseline 0.971, model 0.948"
+    validations:
+      required: true
+
+  - type: textarea
+    id: representations
+    attributes:
+      label: What you changed structurally
+      description: >-
+        The trainer skill says a new seed is not a change and a new learning
+        rate is barely one. List the structural changes you tried — input
+        representation first, since that is where tiny-model gains usually
+        live — and what each did to the number.
+      placeholder: |
+        1. raw char bytes → 0.902
+        2. + char-class features → 0.941
+        3. + 2-char left context → 0.948, then flat
+    validations:
+      required: true
+
+  - type: dropdown
+    id: stopped_by
+    attributes:
+      label: What stopped the run
+      options:
+        - baseline gate (model never strictly beat the baseline)
+        - patience gate (no strict improvement within patience)
+        - wallclock gate
+        - size gate (could not fit the budget without dropping below baseline)
+        - latency gate (could not reach the band)
+        - a kill criterion written in the experiment file
+        - I stopped it myself
+    validations:
+      required: true
+
+  - type: textarea
+    id: budgets
+    attributes:
+      label: Budgets and where you landed
+      description: Size in KB of the exported artifact, and p95 latency measured warm with cold start separately.
+      placeholder: |
+        size budget 50 KB, artifact 34 KB
+        latency band instant (100 ms), p95 warm 12 ms, cold 240 ms
+    validations:
+      required: false
+
+  - type: textarea
+    id: lesson
+    attributes:
+      label: What you would tell the next person
+      description: >-
+        The part that saves someone a week. Was the task mis-scoped? Was the
+        representation capped? Were the labels the real problem?
+    validations:
+      required: true
+
+  - type: textarea
+    id: manifest
+    attributes:
+      label: Run manifest (optional)
+      description: Paste the relevant part of `runs/<run-id>/manifest.json`, or link it.
+      render: json
+    validations:
+      required: false
