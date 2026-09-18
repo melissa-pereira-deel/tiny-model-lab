@@ -82,10 +82,17 @@ felt good, and shipped something worse than four `if` statements.
   commands/    /scope  /experiment  /gate  /ship
   hooks/       refuses training without an experiment file; logs sessions
 harness/       experiment specs, gates, profiling, promotion — plain Python
-docs/          concepts (analogy-first), harness design, stop conditions
+docs/          concepts (analogy-first), harness design, stop conditions,
+               do's and don'ts, how to prompt the agent
 examples/      worked, runnable
 templates/     experiment.yaml, MODEL_CARD.md
 ```
+
+Two pages worth reading before you start:
+**[How to prompt this agent](docs/prompting-guide.md)** — the four commands, the
+five subagents, and why naming your deployment target inside a `/scope` prompt
+saves a round trip. **[Do's and don'ts](docs/dos-and-donts.md)** — the rules that
+are actually enforced, each one pointing at the file that enforces it.
 
 ## The ladder
 
