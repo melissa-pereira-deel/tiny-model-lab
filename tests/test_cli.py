@@ -187,6 +187,108 @@ class TestExperimentRoundTrip:
         assert rebuilt.tags == ["example", "tutorial"]
 
 
+class TestShip:
+    """`ship` was the one subcommand with no tests, which is why it shipped
+    without the overrides `promote()` had all along.
+
+    Without `--champion-dir` it resolves to `project_root()/champion` and
+    `project_root()/runs/LEDGER.md`, and neither `champion/champion.json` nor
+    `runs/LEDGER.md` is gitignored — they are the decision trail. So anyone who
+    ran the documented command from a clone dirtied it, and
+    `examples/02-config-lexer` had to call the Python API instead.
+    """
+
+    @staticmethod
+    def artifact(tmp_path: Path) -> Path:
+        path = tmp_path / "model.onnx"
+        path.write_bytes(b"not really an onnx graph, but real bytes on disk")
+        return path
+
+    def test_promotes_into_the_named_directory(self, tmp_path: Path, capsys) -> None:
+        run_dir = make_run(tmp_path)
+        champ = tmp_path / "champ"
+        code = main(["ship", str(run_dir), str(self.artifact(tmp_path)),
+                     "--champion-dir", str(champ)])
+        assert code == 0
+        assert "PROMOTED" in capsys.readouterr().out
+        assert (champ / "champion.json").exists()
+        assert (champ / "model.onnx").exists()
+
+    def test_the_ledger_follows_the_champion_directory(self, tmp_path: Path) -> None:
+        """Moving the card out of a clone while still appending to its
+        runs/LEDGER.md would only half-answer the reason the flag exists."""
+        champ = tmp_path / "champ"
+        main(["ship", str(make_run(tmp_path)), str(self.artifact(tmp_path)),
+              "--champion-dir", str(champ)])
+        assert (champ / "LEDGER.md").exists()
+        assert "Promotion ledger" in (champ / "LEDGER.md").read_text()
+
+    def test_ledger_can_be_split_from_the_champion(self, tmp_path: Path) -> None:
+        champ, ledger = tmp_path / "champ", tmp_path / "elsewhere" / "L.md"
+        main(["ship", str(make_run(tmp_path)), str(self.artifact(tmp_path)),
+              "--champion-dir", str(champ), "--ledger", str(ledger)])
+        assert (champ / "champion.json").exists()
+        assert ledger.exists()
+        assert not (champ / "LEDGER.md").exists()
+
+    def test_equals_spelling_works_too(self, tmp_path: Path) -> None:
+        champ = tmp_path / "champ"
+        code = main(["ship", str(make_run(tmp_path)), str(self.artifact(tmp_path)),
+                     f"--champion-dir={champ}"])
+        assert code == 0
+        assert (champ / "champion.json").exists()
+
+    def test_the_repo_root_stays_clean(self, tmp_path: Path) -> None:
+        """The regression test for the issue itself.
+
+        `tests/test_project.py` makes this assertion for the library call. The
+        CLI is the documented route, so it is the one that was dirtying clones.
+        """
+        main(["ship", str(make_run(tmp_path)), str(self.artifact(tmp_path)),
+              "--champion-dir", str(tmp_path / "champ")])
+        assert not (REPO_ROOT / "champion").exists()
+        assert not (REPO_ROOT / "runs" / "LEDGER.md").exists()
+
+    def test_shipping_the_same_run_twice_is_refused_by_name(
+        self, tmp_path: Path, capsys
+    ) -> None:
+        """A deterministic run shipped twice ties itself. The refusal stands —
+        it is the strict-improvement rule doing its job — but the reason used to
+        read as though a different model had lost."""
+        run_dir, champ = make_run(tmp_path), tmp_path / "champ"
+        argv = ["ship", str(run_dir), str(self.artifact(tmp_path)),
+                "--champion-dir", str(champ)]
+        assert main(argv) == 0
+        capsys.readouterr()
+        assert main(argv) == 1
+        out = capsys.readouterr().out
+        assert "REFUSED" in out
+        assert run_dir.name in out
+        assert "already the champion" in out
+
+    def test_a_missing_artifact_is_refused(self, tmp_path: Path, capsys) -> None:
+        code = main(["ship", str(make_run(tmp_path)), str(tmp_path / "nope.onnx")])
+        assert code == 2
+        assert "no artifact" in capsys.readouterr().out
+
+    @pytest.mark.parametrize(
+        "extra",
+        [
+            ["--unknown-flag", "x"],          # a typo must not become a positional
+            ["--champion-dir"],               # flag with no value
+            ["--champion-dir", "--ledger"],   # value swallowed from the next flag
+            ["--champion-dir="],              # empty value
+            ["third-positional"],
+        ],
+    )
+    def test_malformed_arguments_return_two(self, tmp_path: Path, extra: list[str]) -> None:
+        argv = ["ship", str(make_run(tmp_path)), str(self.artifact(tmp_path)), *extra]
+        assert main(argv) == 2
+
+    def test_no_arguments_returns_two(self) -> None:
+        assert main(["ship"]) == 2
+
+
 def test_module_entry_point_is_wired_up(tmp_path: Path) -> None:
     """One subprocess test that `python -m harness` actually runs.
 

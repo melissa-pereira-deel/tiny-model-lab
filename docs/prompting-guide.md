@@ -28,7 +28,7 @@ actually calls:
 python -m harness init                      # scaffold a project
 python -m harness validate <experiment.yaml>
 python -m harness gate     <run-dir>
-python -m harness ship     <run-dir> <artifact>
+python -m harness ship     <run-dir> <artifact> [--champion-dir DIR]
 ```
 
 You can use those without Claude Code at all. What you lose is the triage

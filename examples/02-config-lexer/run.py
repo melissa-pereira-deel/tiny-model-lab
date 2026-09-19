@@ -17,6 +17,7 @@ Needs the heavier extras:
 from __future__ import annotations
 
 import json
+import os
 import random
 import sys
 import time
@@ -266,10 +267,11 @@ def main() -> int:
     print("accuracy / size / latency curve:")
     print(summarize(rows))
 
-    # Step 4: promotion, into this example's own champion directory. The `ship`
-    # CLI has no such override and would write into the repo root, so a reader
-    # running this example would dirty their clone and be REFUSED on the second
-    # run for failing strict improvement.
+    # Step 4: promotion, into this example's own champion directory rather than
+    # the repo root, so running the example does not leave files in a clone.
+    # Calling promote() directly is the right thing from inside a Python program
+    # — `python -m harness ship` calls the same function, and would reprint the
+    # whole gate report this script has already printed.
     champion = HERE / "champion"
     verdict = promote(
         run_dir,
@@ -278,6 +280,13 @@ def main() -> int:
         ledger=champion / "LEDGER.md",
     )
     print(f"\npromotion: {verdict.splitlines()[0]}")
+    print(
+        "the same call from a shell:\n"
+        "  python -m harness ship \\\n"
+        f"    {os.path.relpath(run_dir)} \\\n"
+        f"    {os.path.relpath(best_path)} \\\n"
+        f"    --champion-dir {os.path.relpath(champion)}"
+    )
 
     write_model_card(run_dir, exp, rows, int8_disagree)
     print(f"model card: {run_dir / 'MODEL_CARD.md'}")

@@ -7,7 +7,7 @@ model: opus
 
 You take a promoted model and make it a feature. Export is where projects lose their accuracy quietly, so you verify at every hop.
 
-Promotion happens through `python -m harness ship <run-dir> <artifact>`, never by writing to `champion/` yourself. If it refuses, the run is not shippable and that is the finding.
+Promotion happens through `python -m harness ship <run-dir> <artifact>`, never by writing to `champion/` yourself. If it refuses, the run is not shippable and that is the finding. `--champion-dir DIR` sends the card and the ledger somewhere other than the project root, for when you are promoting inside a working tree that is not yours to dirty.
 
 ## Export paths
 

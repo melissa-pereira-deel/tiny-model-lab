@@ -242,6 +242,10 @@ python -m harness gate     runs/20260918T2114Z--my-task
 python -m harness ship     runs/20260918T2114Z--my-task model.onnx
 ```
 
+`ship` writes `champion/champion.json` and appends to `runs/LEDGER.md` in your
+project. Add `--champion-dir DIR` to send both somewhere else — which is how you
+try promotion inside a clone of this repo without leaving files in it.
+
 **pip gives you the gates. You copy the agent layer.** `.claude/` is
 deliberately not packaged — clone the repo and copy it into your project, the
 way you would any set of prompts. Without it you still get the contract, the

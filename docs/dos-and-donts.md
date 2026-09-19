@@ -104,7 +104,11 @@ engineering targets you get to negotiate.
 **Don't hand-edit `champion/`.** `AGENTS.md` states that it changes only via
 `harness/promote.py`, and `promote()` is the only thing that writes
 `champion.json` and appends to `runs/LEDGER.md`. Editing around it costs you the
-one honest record of what was ever actually best.
+one honest record of what was ever actually best. If the reason you were reaching
+for a hand-edit is that promotion would write into a clone you did not want to
+change, `python -m harness ship --champion-dir DIR` moves the card and the ledger
+together — that is the supported way out, and it is what
+`examples/02-config-lexer` uses.
 
 **Don't commit artifacts.** `.gitignore` excludes checkpoints, corpora, and
 exported weights while explicitly keeping `manifest.json`, `LEDGER.md`, and

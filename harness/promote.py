@@ -70,6 +70,15 @@ def evaluate_promotion(
 
     champ = _load_champion(champion_dir)
     if champ is not None:
+        # Shipping the same run twice is not a tie between two models, and the
+        # strict-improvement message reads as though one lost. Same refusal,
+        # different reason: the information is already in hand.
+        if champ.get("run_id") == manifest["run_id"]:
+            return False, (
+                f"run {manifest['run_id']} is already the champion — nothing to "
+                "promote. Strict improvement is measured against the incumbent, "
+                "and a run cannot strictly improve on itself."
+            )
         prev = champ["metric_value"]
         better = final["metric_value"] > prev if higher_is_better else final["metric_value"] < prev
         if not better:
