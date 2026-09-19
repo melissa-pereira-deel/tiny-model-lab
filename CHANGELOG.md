@@ -61,10 +61,17 @@ remediation is a `Changed`.
 - Packaging modernised: PEP 639 license metadata, `dynamic` version read from
   `harness.__version__`, an explicit ruff rule set and a `ruff>=0.16` floor.
 - CI runs on `actions/checkout@v7` and `actions/setup-python@v7`, off the
-  deprecated Node 20 runtime.
+  deprecated Node 20 runtime, and now on Windows as well as Ubuntu. The claim
+  that the harness core has no OS-specific code had one OS of evidence behind
+  it. The hooks are bash, so their tests skip on Windows deliberately.
 
 ### Fixed
 
+- Both hooks hardcoded `python3`, which Git Bash on Windows generally does not
+  have. The guard swallowed the failure and matched an empty command, so it
+  failed **open** — silently not guarding on the one platform where it is most
+  likely to be missing. It now falls back to `python`, and with no interpreter
+  at all matches the raw hook payload rather than nothing.
 - The `SessionEnd` hook appended unconditionally and ignored its payload, so one
   working session left ten entries in `runs/SESSIONS.md` inside four seconds,
   identical apart from the timestamp. It now names the session, the end reason

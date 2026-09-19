@@ -6,16 +6,28 @@ on:
 
 jobs:
   test:
-    # ubuntu-latest is inherited on purpose. It migrates to Ubuntu 26 from
-    # 2026-10-19 and finding that out here is the point: the matrix already
-    # pins what matters, nothing in harness/ is OS-specific, and example-02
-    # asserts a clean tree rather than exact numbers, so the migration cannot
-    # fail this build on numerics. The last break here was drift, and the fix
-    # was pinning the tool (ruff>=0.16), not freezing the world.
-    runs-on: ubuntu-latest
+    # Windows is here because the README claims the core runs anywhere and had
+    # one OS of evidence for it. The workflow layer is a different matter: both
+    # hooks are bash, and their tests skip on Windows deliberately (#11).
+    #
+    # ubuntu-latest is inherited rather than pinned, on purpose. It migrates to
+    # Ubuntu 26 from 2026-10-19 and finding that out here is the point: the
+    # matrix pins what matters, nothing in harness/ is OS-specific, and
+    # example-02 asserts a clean tree rather than exact numbers, so the
+    # migration cannot fail this build on numerics. The last break here was
+    # drift, and the fix was pinning the tool (ruff>=0.16), not freezing the
+    # world.
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
         python-version: ["3.10", "3.12"]
+    # Windows would otherwise run these in PowerShell, where the globs and
+    # `shopt -s nullglob` below are not a language.
+    defaults:
+      run:
+        shell: bash
     steps:
       # v4/v5 targeted Node 20 and were being force-run on 24. Every major from
       # checkout v5 and setup-python v6 declares `using: node24`; these are the

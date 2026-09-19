@@ -13,6 +13,7 @@ fire that learned nothing writes nothing.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -22,9 +23,11 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HOOK = REPO_ROOT / ".claude" / "hooks" / "log-run.sh"
 
-pytestmark = pytest.mark.skipif(
-    shutil.which("bash") is None, reason="the session log is a bash hook"
-)
+# See tests/test_guard_hook.py — the Windows skip is deliberate, not incidental.
+pytestmark = [
+    pytest.mark.skipif(shutil.which("bash") is None, reason="the session log is a bash hook"),
+    pytest.mark.skipif(os.name == "nt", reason="bash-only workflow layer; see #11"),
+]
 
 PAYLOAD = {"session_id": "a3f9c2d1-1111-2222", "reason": "prompt_input_exit"}
 

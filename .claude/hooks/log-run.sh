@@ -35,8 +35,14 @@ root="${CLAUDE_PROJECT_DIR:-.}"
 log="$root/runs/SESSIONS.md"
 
 input=$(cat 2>/dev/null || echo "")
+
+# python3 is not on PATH under Git Bash on Windows. Unlike the guard, this hook
+# has nothing to protect, so a missing interpreter degrades to placeholders
+# rather than refusing.
+PY=$(command -v python3 || command -v python || echo "")
+
 read -r session reason <<<"$(
-  printf '%s' "$input" | python3 -c '
+  [ -n "$PY" ] && printf '%s' "$input" | "$PY" -c '
 import json, sys
 try:
     d = json.load(sys.stdin)
@@ -61,10 +67,13 @@ if [ -n "$found" ]; then
 fi
 
 champ="none"
-[ -f "$root/champion/champion.json" ] && champ=$(
-  python3 -c "import json;print(json.load(open('$root/champion/champion.json'))['task'])" \
-    2>/dev/null || echo "unreadable"
-)
+if [ -f "$root/champion/champion.json" ]; then
+  champ="unreadable"
+  [ -n "$PY" ] && champ=$(
+    "$PY" -c "import json;print(json.load(open('$root/champion/champion.json'))['task'])" \
+      2>/dev/null || echo "unreadable"
+  )
+fi
 
 [ -f "$log" ] || printf '%s\n' "# Session log" "" \
   "Append-only, one line per session. Metadata only — no conversation content." "" > "$log"

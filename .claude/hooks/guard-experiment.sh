@@ -23,7 +23,26 @@
 
 set -euo pipefail
 input=$(cat)
-command=$(printf '%s' "$input" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("command",""))' 2>/dev/null || echo "")
+
+# python3 is not on PATH under Git Bash on Windows, and the old code piped to
+# it with `|| echo ""` — so a missing interpreter produced an empty command,
+# matched nothing, and the guard failed *open* without saying a word. A guard
+# that silently stops guarding is worse than no guard, because you think you
+# have one.
+#
+# The fallback is to match the raw payload instead of the parsed command.
+# Cruder — it can fire on a command that merely mentions a training script —
+# but the patterns below still need an interpreter and a path, so it is not
+# indiscriminate, and it does not block every Bash call the way refusing
+# outright would. Occasionally too loud beats quietly absent.
+degraded=""
+PY=$(command -v python3 || command -v python || true)
+if [ -n "$PY" ]; then
+  command=$(printf '%s' "$input" | "$PY" -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("command",""))' 2>/dev/null || echo "")
+else
+  command="$input"
+  degraded=" (No Python interpreter on PATH, so the guard matched the raw hook payload rather than the parsed command. If that is a false positive, put python3 or python on PATH.)"
+fi
 
 root="${CLAUDE_PROJECT_DIR:-.}"
 
@@ -37,9 +56,9 @@ case "$command" in
   *python*train*.py*|*python*"harness.train"*|*python*experiments/*|\
   *"uv run"*train*.py*|*"poetry run"*train*.py*|./*train*.py*)
     if ! compgen -G "$root/experiments/*.yaml" >/dev/null 2>&1; then
-      cat <<'MSG'
-{"decision":"block","reason":"No experiment file found in experiments/. Training without one is how runs become unaccountable. Run /scope first to produce an experiment.yaml with a named baseline and explicit budgets."}
-MSG
+      printf '{"decision":"block","reason":"%s%s"}\n' \
+        "No experiment file found in experiments/. Training without one is how runs become unaccountable. Run /scope first to produce an experiment.yaml with a named baseline and explicit budgets." \
+        "$degraded"
       exit 0
     fi
     ;;
