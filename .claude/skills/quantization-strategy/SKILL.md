@@ -12,8 +12,10 @@ Quantization is storing weights at lower precision. Think of it as choosing how 
 | Bit width | Method | Expect |
 |---|---|---|
 | int8 | Post-training (PTQ) | Usually near-lossless. Try this first, it takes minutes. |
-| int6 | QAT strongly preferred | Workable with training-time simulation. gpu-lexer ships int6. |
+| int6 | QAT strongly preferred | Workable with training-time simulation. gpu-lexer ships int6 — through a hand-written WGSL forward pass, not an exporter. |
 | int4 and below | QAT required | PTQ degrades badly here. Budget for retraining. |
+
+**Below 8 bits, check your export path has the width before you train for it.** int8 is the one width everything supports. Sub-8-bit is a property of the target, not of the model: WGSL takes whatever you compile into it, Core ML palettizes down to 1 bit, and an ONNX graph has int8 and int4 but nothing at 6. Discovering this after a QAT run is an expensive way to read a table.
 
 **PTQ** quantizes an already-trained model. Cheap, immediate, and the right first attempt.
 
@@ -30,3 +32,5 @@ Quantization is storing weights at lower precision. Think of it as choosing how 
 ## The trap
 
 Quantization failures are quiet. The model loads, runs, produces plausible output, and is worse in a way no exception surfaces. Always compare the quantized model against the full-precision one on the same held-out set and report the disagreement rate as a number.
+
+There is no universal threshold for that number, and this repo does not invent one. What counts as acceptable depends on what the disagreements *are* — a lexer that mislabels a comment costs a wrong colour, a classifier gating an irreversible action costs more. State the tolerance you chose for this task alongside the rate, so the next person is arguing with a decision rather than guessing at one. It is deliberately not a gate: the harness would have to keep the full-precision model around to check it, and the number that matters is a judgement about the product, not arithmetic about the model.

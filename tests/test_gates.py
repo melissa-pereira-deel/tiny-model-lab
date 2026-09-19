@@ -34,6 +34,7 @@ def make_experiment(**overrides) -> Experiment:
         hypothesis="a tiny model can beat the regex tagger on unseen formats",
         baseline=baseline,
         budgets=budgets,
+        target=overrides.pop("target", "onnx-web"),
     )
 
 
@@ -95,6 +96,31 @@ class TestSizeGate:
 
     def test_over_budget_fails(self):
         assert not size_gate(make_experiment(max_size_kb=50), 50.1).passed
+
+    def test_remediation_tries_ptq_before_qat(self):
+        """The regression test for the contradiction in #14.
+
+        `quantization-strategy` says int8 is post-training and the first thing
+        to try; this text used to say quantization-aware training *at* int8,
+        which costs a retrain to reach a width PTQ reaches in minutes. An agent
+        reading the gate contradicted the skill, and the gate is what it reads
+        at the moment it is over budget.
+        """
+        text = size_gate(make_experiment(max_size_kb=50), 90.0).remediation
+        assert "post-training" in text
+        assert "quantization-aware" in text
+        assert text.index("post-training") < text.index("quantization-aware")
+
+    def test_remediation_names_the_target(self):
+        """Sub-8-bit is a property of the export path, not of the model.
+
+        The gate deliberately carries no table of which widths each target
+        supports — that rots. It names the target so the agent goes and checks
+        before spending a retrain on a width its exporter has no format for.
+        """
+        for target in ("onnx-web", "coreml", "wgsl"):
+            text = size_gate(make_experiment(max_size_kb=50, target=target), 90.0).remediation
+            assert target in text
 
 
 class TestLatencyGate:

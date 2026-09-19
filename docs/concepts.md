@@ -57,7 +57,7 @@ Round to 3 and your circles come out wrong.
 bits shrinks the model proportionally. Two approaches:
 
 - **Post-training quantization** — compress an already-trained model. Cheap, immediate, usually fine at 8-bit.
-- **Quantization-aware training** — simulate the rounding *during* training so the model learns weights that survive it. Needed below 8-bit. gpu-lexer ships int6 this way.
+- **Quantization-aware training** — simulate the rounding *during* training so the model learns weights that survive it. Needed below 8-bit, and only worth it once you know your export path has a format at that width: gpu-lexer ships int6 because it hand-writes its own WGSL forward pass, not because int6 is a thing exporters generally offer.
 
 The trap: quantization failures are silent. The model still loads and produces
 plausible output. Always compare against the full-precision version and report

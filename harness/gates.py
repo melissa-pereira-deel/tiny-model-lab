@@ -84,6 +84,18 @@ def baseline_gate(
 
 
 def size_gate(experiment: Experiment, actual_kb: float) -> GateResult:
+    """Bytes the user downloads, measured on disk — not a parameter count.
+
+    The order in the remediation is the one `quantization-strategy` states, and
+    it used to be the reverse of it: this text sent the agent to
+    quantization-aware training *at* int8, while the skill says int8 is
+    post-training, near-lossless and the cheap first move. Two files cannot both
+    be the rule, and this is the one that speaks at the moment of decision.
+
+    It names the target rather than carrying a table of which widths each export
+    path supports. That table is framework knowledge, it changes, and a sensor
+    that has to be kept current is not one you can trust.
+    """
     cap = experiment.budgets.max_size_kb
     return GateResult(
         name="size",
@@ -91,9 +103,12 @@ def size_gate(experiment: Experiment, actual_kb: float) -> GateResult:
         detail=f"artifact {actual_kb:.1f} KB vs budget {cap:.1f} KB",
         remediation=(
             f"Over budget by {actual_kb - cap:.1f} KB. Try in order: "
-            "quantization-aware training at lower bit width (int8 → int6 → int4), "
-            "then width reduction, then pruning. Re-run the baseline gate after "
-            "each — compression that breaks accuracy is not a win."
+            "post-training quantization to int8 — minutes, usually near-lossless, "
+            "and the one width every export path supports; then quantization-aware "
+            "training below 8 bits, though confirm the target you declared "
+            f"({experiment.target}) has a format for that width before you spend a "
+            "retrain reaching it; then width reduction; then pruning. Re-run the "
+            "baseline gate after each — compression that breaks accuracy is not a win."
         ),
     )
 
