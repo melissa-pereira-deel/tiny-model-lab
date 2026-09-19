@@ -34,9 +34,13 @@ target: onnx-web           # onnx-web | coreml | tflite | wgsl | mlx-local
 dataset:
   source: ""               # deterministic teacher | large-model | hand
   teacher: ""              # the tool or model producing labels
-  split_by: ""             # repo | user | time | document — NOT random
-  size: 0
-  holdout_size: 0
+  split_by: ""             # repo | user | time | document — the unit
+                           # generalisation has to cross. NOT random.
+  split_rationale: ""      # required only if split_by names a random split.
+                           # Not an escape hatch: it costs you a sentence
+                           # naming the grouping unit that does not exist.
+  size: 0                  # training rows
+  holdout_size: 0          # held-out rows, drawn separately. Must be > 0.
 
 architecture:
   family: ""               # linear | trees | cnn | gru | transformer

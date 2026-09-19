@@ -70,6 +70,12 @@ Changing the input representation is one, and it is usually the one that works.
 **Do split by something meaningful.** `harness/templates/experiment.yaml` spells the
 field as `split_by: repo | user | time | document — NOT random`. A random split
 over correlated records measures memorisation and reports it as accuracy.
+`validate.py` now enforces this, along with a positive `holdout_size`. If the
+records really are independent and random is honest, say so — `split_by: random`
+passes once `split_rationale` names the grouping unit that does not exist.
+Note what the check cannot do: it reads the label, not the split. This rule was
+added because `examples/01-hello-tiny` declared `split_by: "document"` for a
+corpus of standalone generated strings and passed validation.
 
 **Don't report agreement with a teacher as correctness.** `CONTRIBUTING.md`
 calls this out as the most common dishonesty in the field. If your labels come

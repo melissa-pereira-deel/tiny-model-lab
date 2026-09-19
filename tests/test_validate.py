@@ -27,6 +27,13 @@ MINIMAL = {
         "notes": "",
     },
     "budgets": {"max_size_kb": 50, "latency_band": "instant", "patience_evals": 3},
+    "dataset": {
+        "source": "deterministic teacher",
+        "teacher": "the existing regex tagger",
+        "split_by": "repo",
+        "size": 4000,
+        "holdout_size": 1000,
+    },
     "kill_criteria": ["Baseline still wins after two structural changes"],
 }
 
@@ -46,13 +53,14 @@ def write_experiment(tmp_path: Path, **overrides) -> Path:
 
 
 class TestShippedFiles:
-    def test_worked_example_validates(self) -> None:
-        """The regression test: the validator must accept the example it cites.
+    @pytest.mark.parametrize("example", ["01-hello-tiny", "02-config-lexer"])
+    def test_worked_example_validates(self, example: str) -> None:
+        """The regression test: the validator must accept the examples it cites.
 
         `.claude/commands/experiment.md` makes `harness.validate` step 1 of
         /experiment, so an example that fails it blocks the documented flow.
         """
-        problems = validate(REPO_ROOT / "examples" / "01-hello-tiny" / "experiment.yaml")
+        problems = validate(REPO_ROOT / "examples" / example / "experiment.yaml")
         assert problems == []
 
     def test_template_is_deliberately_invalid(self) -> None:
@@ -60,9 +68,12 @@ class TestShippedFiles:
 
         Making it validate would mean shipping a fake baseline name, which is
         the habit the validator exists to break. Pinned so nobody "fixes" it.
+        The dataset assertions are also a free check that the split rules bite.
         """
         problems = validate(REPO_ROOT / "harness" / "templates" / "experiment.yaml")
         assert any("baseline.name" in p for p in problems)
+        assert any("dataset.split_by" in p for p in problems)
+        assert any("dataset.holdout_size" in p for p in problems)
 
 
 class TestBaselineValue:
@@ -119,6 +130,77 @@ class TestOtherRules:
 
     def test_a_valid_file_has_no_problems(self, tmp_path: Path) -> None:
         assert validate(write_experiment(tmp_path)) == []
+
+
+class TestDatasetSplit:
+    """`split_by` was the one load-bearing rule with nothing behind it.
+
+    The template has said `NOT random` since the first commit and
+    `dataset-synthesis` explains the cost — "the resulting number is real in
+    your notebook and fictional in production" — but `validate` checked five
+    things and none of them was a dataset field. So 01 shipped
+    `split_by: "document"` over a corpus of independent generated strings and
+    passed.
+    """
+
+    def test_missing_dataset_block_is_rejected(self, tmp_path: Path) -> None:
+        problems = validate(write_experiment(tmp_path, dataset={}))
+        assert any("dataset block is missing" in p for p in problems)
+
+    def test_empty_split_by_is_rejected(self, tmp_path: Path) -> None:
+        problems = validate(write_experiment(tmp_path, dataset__split_by=""))
+        assert any("dataset.split_by is empty" in p for p in problems)
+
+    @pytest.mark.parametrize("unit", ["repo", "user", "time", "document", "dialect"])
+    def test_a_named_grouping_unit_needs_no_argument(self, tmp_path: Path, unit: str) -> None:
+        assert validate(write_experiment(tmp_path, dataset__split_by=unit)) == []
+
+    @pytest.mark.parametrize(
+        "name", ["random", "Random", "RANDOM", " random ", "shuffled", "stratified", "none"]
+    )
+    def test_a_random_split_without_an_argument_is_rejected(
+        self, tmp_path: Path, name: str
+    ) -> None:
+        problems = validate(write_experiment(tmp_path, dataset__split_by=name))
+        assert any("split_rationale" in p for p in problems)
+
+    def test_a_random_split_with_an_argument_is_accepted(self, tmp_path: Path) -> None:
+        """The escape is a declaration, not an exemption — same as
+        `measured_at_runtime`. Some tasks genuinely have no grouping unit, and
+        forcing those to invent one is how 01 ended up saying "document"."""
+        path = write_experiment(
+            tmp_path,
+            dataset__split_by="random",
+            dataset__split_rationale=(
+                "every example is an independent draw, so nothing leaks across the split"
+            ),
+        )
+        assert validate(path) == []
+
+    def test_a_one_word_argument_does_not_count(self, tmp_path: Path) -> None:
+        """Same five-word floor as the hypothesis rule. "because" is not a reason."""
+        path = write_experiment(
+            tmp_path, dataset__split_by="random", dataset__split_rationale="independent"
+        )
+        assert any("split_rationale" in p for p in validate(path))
+
+    def test_message_names_the_escape(self, tmp_path: Path) -> None:
+        """The message's job is to teach the escape, so a reword must not drop it."""
+        problems = validate(write_experiment(tmp_path, dataset__split_by=""))
+        assert any("split_by: random" in p and "split_rationale" in p for p in problems)
+
+    def test_the_check_admits_it_cannot_detect_a_lie(self, tmp_path: Path) -> None:
+        """A false label passes, and the message says so rather than implying
+        the split itself was inspected. This is the hole 01 fell through, and
+        pretending it is closed would be worse than leaving it open."""
+        assert validate(write_experiment(tmp_path, dataset__split_by="document")) == []
+        problems = validate(write_experiment(tmp_path, dataset__split_by="random"))
+        assert any("reads a label, not a split" in p for p in problems)
+
+    @pytest.mark.parametrize("bad", [0, -1, None, "lots"])
+    def test_non_positive_holdout_is_rejected(self, tmp_path: Path, bad: object) -> None:
+        problems = validate(write_experiment(tmp_path, dataset__holdout_size=bad))
+        assert any("dataset.holdout_size" in p for p in problems)
 
 
 @pytest.mark.parametrize("kind", ["deterministic", "classical", "existing_tool", "previous_run"])

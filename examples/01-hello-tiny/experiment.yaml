@@ -24,7 +24,15 @@ target: onnx-web
 dataset:
   source: "deterministic teacher"
   teacher: "Python str methods"
-  split_by: "document"
+  split_by: "random"
+  split_rationale: >-
+    Every example is an independent draw from make_data(); there is no document,
+    user or repo for a leak to cross, so random is the honest answer here. This
+    field said "document" until it was checked — a legal-sounding name for the
+    same random split, which is exactly the habit the rule exists to break. See
+    examples/02-config-lexer, where the split unit is real: the held-out set is
+    two dialects the baseline was never written against, and the gap between
+    1.0000 and 0.8750 is the thing a random split would have hidden.
   size: 4000
   holdout_size: 1000
 

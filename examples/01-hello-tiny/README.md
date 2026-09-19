@@ -20,6 +20,7 @@ and shipped a model that was worse than four lines of `if` statements.
 
 - `experiment.yaml` — the contract, including `kill_criteria` written before any training, and `measured_at_runtime: true` because `run.py` measures the baseline on the held-out split rather than hard-coding it
 - the gate output — note that `baseline` fails while `size` and `latency` pass; a model can pass every technical budget and still be the wrong thing to ship
+- `split_by: random`, with a sentence saying why — every example here is an independent draw from `make_data()`, so there is no document, user or repo for a leak to cross. This file said `split_by: "document"` until the validator started checking, which was a legal-sounding name for the same random split. `examples/02-config-lexer` is the contrast: it holds out two whole dialects, and the gap between what its baseline scores on the dialects it was written for and what it scores on the ones it wasn't is precisely what a random split would have hidden
 - `runs/<timestamp>--*/manifest.json` — the provenance trail that survives the session
 - the accuracy/size/latency table — the real deliverable of a tiny-model project is the curve, not a single number
 
