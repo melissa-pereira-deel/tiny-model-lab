@@ -71,6 +71,31 @@ class TestExitCodes:
         blank = REPO_ROOT / "harness" / "templates" / "experiment.yaml"
         assert main(["validate", str(blank)]) == 1
 
+    def test_validate_without_a_path(self) -> None:
+        assert main(["validate"]) == 2
+
+
+class TestValidateTakesSeveralFiles:
+    """CONTRIBUTING tells contributors to pass a glob.
+
+    A command that accepted exactly one path worked only while this repo had
+    exactly one example, and would have started failing the day a second landed.
+    """
+
+    BLANK = REPO_ROOT / "harness" / "templates" / "experiment.yaml"
+
+    def test_all_good_passes(self) -> None:
+        assert main(["validate", str(EXAMPLE_SPEC), str(EXAMPLE_SPEC)]) == 0
+
+    def test_one_bad_fails_the_lot(self) -> None:
+        assert main(["validate", str(EXAMPLE_SPEC), str(self.BLANK)]) == 1
+
+    def test_reports_every_file_not_just_the_first_bad_one(self, capsys) -> None:
+        main(["validate", str(self.BLANK), str(EXAMPLE_SPEC)])
+        out = capsys.readouterr().out
+        assert "INVALID" in out
+        assert "VALID —" in out  # the good one is still reported after the bad one
+
 
 class TestGateOutput:
     def test_reports_every_gate_including_passes(self, tmp_path: Path, capsys) -> None:

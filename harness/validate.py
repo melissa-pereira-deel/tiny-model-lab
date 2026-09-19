@@ -1,6 +1,9 @@
 """Validate an experiment file before anything expensive happens.
 
-Usage:  python -m harness.validate experiments/my-task.yaml
+Usage:  python -m harness validate experiments/my-task.yaml
+
+This module keeps its own entry point, so `python -m harness.validate <path>`
+still works. The dispatcher is the documented one, and it takes several paths.
 """
 
 from __future__ import annotations

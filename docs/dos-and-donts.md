@@ -116,10 +116,12 @@ from it is not — `AGENTS.md`, stack defaults.
 ## Before a pull request
 
 ```bash
-pytest -q
-ruff check .
+python -m harness validate examples/*/experiment.yaml
 python examples/01-hello-tiny/run.py
+ruff check .
+pytest -q
 ```
 
-All three run in CI (`.github/workflows/ci.yml`) on Python 3.10 and 3.12, which
-also checks that every experiment file still parses.
+All four run in CI (`.github/workflows/ci.yml`) on Python 3.10 and 3.12, which
+also parse-checks the blank template — the one file that cannot be validated,
+because being invalid is its job.

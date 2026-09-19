@@ -49,17 +49,27 @@ def cmd_init(argv: list[str]) -> int:
 
 
 def cmd_validate(argv: list[str]) -> int:
-    if len(argv) != 1:
+    """Validate one or more experiment files.
+
+    Takes several because a shell glob is the natural way to check them all, and
+    a command that accepts exactly one would start failing the moment this repo
+    grows a second example. Reports every file rather than stopping at the first
+    bad one: you want the whole list, not the first item on it.
+    """
+    if not argv:
         print(__doc__)
         return 2
-    problems = validate(argv[0])
-    if problems:
-        print(f"INVALID — {argv[0]}")
-        for p in problems:
-            print(f"  - {p}")
-        return 1
-    print(f"VALID — {argv[0]}")
-    return 0
+    status = 0
+    for path in argv:
+        problems = validate(path)
+        if problems:
+            print(f"INVALID — {path}")
+            for p in problems:
+                print(f"  - {p}")
+            status = 1
+        else:
+            print(f"VALID — {path}")
+    return status
 
 
 def cmd_gate(argv: list[str]) -> int:

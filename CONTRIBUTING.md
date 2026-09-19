@@ -29,8 +29,16 @@ bodies under ~500 lines and push detail into references.
 
 ## Before opening a PR
 
+Everything CI runs, in the order it runs it:
+
 ```bash
 pip install -e ".[dev]"
+python -m harness validate examples/*/experiment.yaml
 python examples/01-hello-tiny/run.py
 ruff check .
+pytest -q
 ```
+
+CI additionally parse-checks `harness/templates/experiment.yaml`, which cannot
+be validated — it is a blank form and is invalid on purpose. That only matters
+if you are editing the template itself.
