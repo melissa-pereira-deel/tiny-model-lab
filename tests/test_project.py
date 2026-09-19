@@ -10,6 +10,7 @@ branch that mutates `champion/` and the ledger had never been run.
 from __future__ import annotations
 
 import json
+from importlib import metadata
 from pathlib import Path
 
 import pytest
@@ -139,3 +140,21 @@ class TestPromotion:
         result = promote(run_dir, artifact, champion_dir=tmp_path / "c", ledger=tmp_path / "L.md")
         assert result.startswith("REFUSED")
         assert not (tmp_path / "c").exists()
+
+
+class TestPackaging:
+    def test_version_is_declared_in_exactly_one_place(self) -> None:
+        """pyproject declares `dynamic = ["version"]` and reads __version__.
+
+        The two cannot drift by construction, which is the fix. This test
+        catches the dynamic config silently breaking instead — a literal
+        creeping back into pyproject would show up as installed metadata
+        disagreeing with the source.
+        """
+        import harness
+
+        try:
+            installed = metadata.version("tiny-model-lab")
+        except metadata.PackageNotFoundError:
+            pytest.skip("package not installed, so there is no metadata to compare")
+        assert installed == harness.__version__
