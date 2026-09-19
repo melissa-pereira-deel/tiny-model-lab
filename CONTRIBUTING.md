@@ -42,3 +42,11 @@ pytest -q
 CI additionally parse-checks `harness/templates/experiment.yaml`, which cannot
 be validated — it is a blank form and is invalid on purpose. That only matters
 if you are editing the template itself.
+
+**If you changed a rule, add it to `CHANGELOG.md` under `[Unreleased]`.** A gate's
+arithmetic, a validator's requirement, the guard's match patterns — those are the
+changes someone pinned to a version cannot discover any other way, and a gate
+that gets stricter goes under `Gate semantics` because it invalidates a run that
+passed. New features and fixes are worth a line too; `tests/test_changelog.py`
+only enforces that the version and the categories stay honest, not that you
+wrote an entry.

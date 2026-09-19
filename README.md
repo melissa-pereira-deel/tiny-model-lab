@@ -29,7 +29,7 @@ you can prove it beat the four lines of code it replaced.
 
 > **⚠️ Status: early, and measured about it.**
 >
-> The harness, the gates, the CLI and both worked examples run today, with 104
+> The harness, the gates, the CLI and both worked examples run today, with 148
 > tests and CI on Python 3.10 and 3.12. The five subagents and six skills are
 > written and usable; they have not been evaluated at scale.
 >
