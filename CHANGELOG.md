@@ -65,6 +65,12 @@ remediation is a `Changed`.
 
 ### Fixed
 
+- The `SessionEnd` hook appended unconditionally and ignored its payload, so one
+  working session left ten entries in `runs/SESSIONS.md` inside four seconds,
+  identical apart from the timestamp. It now names the session, the end reason
+  and the most recent run — the fields that actually distinguish entries — and
+  skips a write that says nothing new. Why it fires repeatedly is still unknown;
+  recording `session_id` and `reason` is what makes the next time diagnosable.
 - The `PreToolUse` guard matched paths where training never happens, and fired
   on prose — a commit message mentioning `python` and `train` was enough to
   block it. A guard that fires on prose gets switched off.
