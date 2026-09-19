@@ -29,11 +29,15 @@ you can prove it beat the four lines of code it replaced.
 
 > **⚠️ Status: early, and measured about it.**
 >
-> The harness, the gates, the CLI and the worked example run today, with 99
+> The harness, the gates, the CLI and both worked examples run today, with 104
 > tests and CI on Python 3.10 and 3.12. The five subagents and six skills are
-> written and usable; they have not been evaluated at scale. No model has been
-> trained and shipped through the full loop yet — the one worked example ends
-> with the baseline winning, which is honest but modest.
+> written and usable; they have not been evaluated at scale.
+>
+> A real model now goes through the whole pipeline — trained in PyTorch,
+> exported to ONNX, verified numerically, quantized to int8, gated on bytes on
+> disk. **Nothing has been promoted**, because in both examples the baseline
+> won. That is the outcome this repo predicts for most tasks, and it is still a
+> thinner result than a shipped champion would be.
 >
 > Treat version 0.1 as a well-argued starting point, not a proven system. The
 > most useful thing you can send is a negative result: *"I trained this, the
@@ -162,8 +166,9 @@ costs days. Earn it.
 
 ## The shape of task that fits
 
-These are *shapes*, not a portfolio — nothing here has been built and shipped
-through this repo yet. They are what the triage questions are looking for, and
+These are *shapes*, not a portfolio. One of them has now been built and taken
+through the whole pipeline in `examples/02-config-lexer/`, where the baseline
+won. They are what the triage questions are looking for, and
 they share a signature: a closed output space, a bounded input, and labels you
 can get for free from a tool that already exists.
 
@@ -281,7 +286,7 @@ harness/       the contract, the gates, profiling, promotion, CLI — plain Pyth
                plus templates/, so they ship with the package
 docs/          concepts, harness design, stop conditions, do's and don'ts,
                how to prompt the agent
-examples/      worked, runnable
+examples/      01 dependency-free in a second; 02 trains, exports, quantizes
 ```
 
 Two pages worth reading before you start. **[How to prompt this

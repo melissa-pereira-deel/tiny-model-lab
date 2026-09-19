@@ -15,6 +15,14 @@ Be specific and generous here. This section is the reason model cards exist.
 | Cold start | |
 | Metric vs baseline | |
 | Baseline it beats | |
+| Disagreement vs source framework | |
+| Disagreement vs full precision | |
+
+The two disagreement rows are the number `export-pipeline`, `quantization-strategy`
+and the `embedder` subagent all ask for: how often the converted or quantized
+artifact picks a different answer than the thing it came from, on the same
+held-out set. No threshold is prescribed anywhere in this repo — report it,
+say what you think it means, and do not invent a pass mark.
 
 ## What the metric actually measures
 State the comparison honestly. If you measure agreement with a teacher tool,

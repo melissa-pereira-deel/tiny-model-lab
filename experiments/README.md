@@ -14,6 +14,8 @@ A refusal is also a result. If `/scope` decides the task belongs on a lower rung
 of the ladder, write that down here too — a short `<slug>-refused.md` naming the
 rung and why — so the next person does not re-derive it.
 
-The worked example is deliberately not here: `examples/01-hello-tiny/` carries
-its own `experiment.yaml` next to its runner, so the example stays
-self-contained and the guard exempts it by path.
+The worked examples are deliberately not here. `examples/01-hello-tiny/` and
+`examples/02-config-lexer/` each carry their own `experiment.yaml` next to their
+runner, so each stays self-contained. The guard exempts 01 by path because CI
+and the README's one-second promise both invoke it; 02 is not matched because
+its entry point is `run.py`, not something with `train` in the name.

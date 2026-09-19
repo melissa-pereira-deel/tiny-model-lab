@@ -9,7 +9,7 @@ that claim is currently thin because nobody publishes it.
 
 Also valuable:
 
-- **Worked examples** that train a real model end to end and export it
+- **Worked examples** that train a real model end to end and export it — `examples/02-config-lexer/` is the reference shape. A third that ends with the model *winning* would be the most useful one yet; both of the current examples end with the baseline ahead
 - **Export-path notes** — especially MLX, Core ML, and WebGPU correctness gotchas
 - **Better gates**, particularly computational (fast, deterministic) rather than inferential
 - **Corrections** where a claim here is wrong or has gone stale

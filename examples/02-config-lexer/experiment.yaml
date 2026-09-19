@@ -1,0 +1,55 @@
+task: "Classify a config-file line as comment / section / key / value"
+
+hypothesis: >-
+  A conv over character *classes* plus a few deterministic scalar features can
+  beat a hand-written rule set on config dialects the rules were never written
+  against, because it never learns which byte is the separator — only that there
+  is one and whether anything follows it.
+
+baseline:
+  kind: deterministic
+  name: "regex rule set (comment/section/assignment), written against ini + env + make"
+  metric: accuracy
+  value: 0.0        # run.py measures this on the held-out dialects before start_run()
+  measured_at_runtime: true
+  notes: >-
+    Written as well as I could make it for the three training dialects, then
+    scored on two it had never seen and not adjusted afterwards. It gets 1.0000
+    on its own dialects. A baseline chosen to be weak would make the whole
+    comparison decoration.
+
+budgets:
+  max_size_kb: 50          # a browser feature nobody should wait to download
+  latency_band: instant    # it runs per line while someone is typing
+  max_latency_ms: null
+  max_wallclock_minutes: 10
+  patience_evals: 2
+
+target: onnx-web           # chosen before the framework, per export-pipeline
+
+dataset:
+  source: "synthetic generator (deterministic teacher)"
+  teacher: "examples/02-config-lexer/dialects.py — labels are true by construction"
+  split_by: "dialect"
+  size: 4800
+  holdout_size: 2400
+
+architecture:
+  family: cnn
+  why: >-
+    The structure is local and position-shifted: a separator means the same
+    thing wherever it lands on the line, so a small 1D convolution is the
+    weakest bias that fits. Attention would be decoration at this size.
+  representation: >-
+    The experiment is the representation. Variant one sees literal characters
+    and can memorise that "=" means assignment. Variant two sees character
+    classes plus scalars a deterministic pass computes for free — is there a
+    separator, is anything after it, where does it sit, how deep is the indent.
+    Only the second can transfer to a dialect whose separator it never saw.
+
+kill_criteria:
+  - "Neither representation beats the rule set on the held-out dialects"
+  - "Cannot fit 50KB as exported ONNX without dropping below the baseline"
+  - "p95 stays above the instant ceiling after quantization"
+
+tags: [example, export, quantization]

@@ -33,3 +33,27 @@ jobs:
         run: python examples/01-hello-tiny/run.py
       - run: ruff check .
       - run: pytest -q
+
+  # Separate job, one Python version, because it pulls ~130 MB of torch. Runs
+  # alongside the matrix rather than inside it: the harness core stays
+  # dependency-light, but an example CI never executes is an example that rots.
+  example-02:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Not ".[export]" — that bundles coremltools, which the ONNX path does
+      # not touch. Install what the example actually imports.
+      - run: pip install -e ".[train]" onnx onnxruntime
+      - name: Second worked example trains, exports and gates
+        run: python examples/02-config-lexer/run.py
+      - name: It leaves the working tree clean
+        run: |
+          git status --porcelain > /tmp/dirty
+          if [ -s /tmp/dirty ]; then
+            echo "the example wrote something it should not have:"
+            cat /tmp/dirty
+            exit 1
+          fi
