@@ -50,8 +50,9 @@ transfer on one label and paid for it on another.
 | conv over character classes | 0.7658 | 5.3 KB | 0.0 ms |
 | raw characters, int8 | 0.7892 | 4.9 KB | 0.1 ms |
 
-*One run on one machine. The numbers move a little between machines and torch
-versions; the shape does not.*
+*These reproduced to four decimal places on macOS/arm64 under Python 3.14 and on
+Linux/x86 under 3.12 in CI, seeds being fixed at import. A different torch
+version could still move them; the shape would not.*
 
 So the kill criterion written into `experiment.yaml` before any of this ran —
 *"neither representation beats the rule set on the held-out dialects"* — fired,
