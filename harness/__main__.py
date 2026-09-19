@@ -40,6 +40,26 @@ DESIGN_CHECKS_NOTE = (
 )
 
 
+def use_utf8_stdout() -> None:
+    """Say what encoding this program's output is in, rather than inheriting.
+
+    Python falls back to the locale encoding, and these commands print em
+    dashes. Measured, not assumed: running the worked example under cp932,
+    koi8-r or ascii raises UnicodeEncodeError before it prints a single gate.
+    cp1252 survives the em dash and dies on the arrow that used to be in
+    `GateResult.__str__` — which is how #11's Windows CI leg found this.
+
+    Only programs call this. A library that reconfigures its caller's stdout
+    is a library that has overstepped, which is why `gates.py` was made ASCII
+    instead.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass  # Not a real stream, or already wrapped. Nothing to do.
+
+
 def cmd_init(argv: list[str]) -> int:
     if len(argv) > 1:
         print(__doc__)
@@ -196,6 +216,7 @@ COMMANDS = {
 
 
 def main(argv: list[str] | None = None) -> int:
+    use_utf8_stdout()
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv or argv[0] not in COMMANDS:
         print(__doc__)

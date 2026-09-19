@@ -28,10 +28,18 @@ class GateResult:
     remediation: str = ""
 
     def __str__(self) -> str:
+        """ASCII only, on purpose.
+
+        This used to be a U+2192 arrow, which is not in cp1252 — so printing a
+        failed gate raised UnicodeEncodeError on a default Windows console.
+        Found by adding windows-latest to CI (#11). A library returns strings
+        its caller has to be able to print; making every consumer reconfigure
+        stdout to read a gate result is not a reasonable thing to ask.
+        """
         mark = "PASS" if self.passed else "FAIL"
         out = f"[{mark}] {self.name}: {self.detail}"
         if not self.passed and self.remediation:
-            out += f"\n       → {self.remediation}"
+            out += f"\n       -> {self.remediation}"
         return out
 
 
@@ -55,12 +63,12 @@ def baseline_gate(
             ),
             remediation=(
                 "The number never arrived, so there is nothing to beat and every "
-                "candidate 'wins' — the exact comparison this harness exists to "
+                "candidate 'wins' -- the exact comparison this harness exists to "
                 "prevent. Measure the baseline on the held-out split and assign it "
                 "to experiment.baseline.value before start_run(), the way "
                 "examples/01-hello-tiny/run.py does. If the measurement genuinely is "
-                "0.0, state the metric in the direction where it is not — accuracy "
-                "1.0, not error 0.0 — so the gate has something to compare."
+                "0.0, state the metric in the direction where it is not -- accuracy "
+                "1.0, not error 0.0 -- so the gate has something to compare."
             ),
         )
     beat = candidate_value > b.value if higher_is_better else candidate_value < b.value
@@ -74,7 +82,7 @@ def baseline_gate(
         passed=beat,
         detail=detail,
         remediation=(
-            "The baseline still wins. Do NOT tune hyperparameters yet — that is "
+            "The baseline still wins. Do NOT tune hyperparameters yet -- that is "
             "the expensive way to discover a scoping error. In order: (1) improve "
             "the input representation, which is where most tiny-model gains live; "
             "(2) check label quality on 20 disagreements by hand; (3) if neither "
@@ -103,12 +111,12 @@ def size_gate(experiment: Experiment, actual_kb: float) -> GateResult:
         detail=f"artifact {actual_kb:.1f} KB vs budget {cap:.1f} KB",
         remediation=(
             f"Over budget by {actual_kb - cap:.1f} KB. Try in order: "
-            "post-training quantization to int8 — minutes, usually near-lossless, "
+            "post-training quantization to int8 -- minutes, usually near-lossless, "
             "and the one width every export path supports; then quantization-aware "
             "training below 8 bits, though confirm the target you declared "
             f"({experiment.target}) has a format for that width before you spend a "
             "retrain reaching it; then width reduction; then pruning. Re-run the "
-            "baseline gate after each — compression that breaks accuracy is not a win."
+            "baseline gate after each -- compression that breaks accuracy is not a win."
         ),
     )
 
@@ -167,7 +175,7 @@ def patience_gate(experiment: Experiment, eval_history: Sequence[float],
         ),
         remediation=(
             "No strict improvement within patience. Stop this run. Write what you "
-            "learned into the run manifest and change something structural — the "
+            "learned into the run manifest and change something structural -- the "
             "representation, the architecture family, or the task definition. "
             "Another seed is not a change."
         ),
@@ -182,7 +190,7 @@ def wallclock_gate(experiment: Experiment, elapsed_minutes: float) -> GateResult
         detail=f"{elapsed_minutes:.1f} min elapsed vs cap {cap} min",
         remediation=(
             "Wall-clock cap hit. Stop and report. If the curve was still climbing, "
-            "that is a finding worth recording — raise the cap deliberately in the "
+            "that is a finding worth recording -- raise the cap deliberately in the "
             "experiment file rather than letting a run drift past it."
         ),
     )

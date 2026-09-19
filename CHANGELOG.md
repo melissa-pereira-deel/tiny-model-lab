@@ -67,6 +67,15 @@ remediation is a `Changed`.
 
 ### Fixed
 
+- Gate output was not printable on a default Windows console. `GateResult`
+  returned a U+2192 arrow, which is not in cp1252, so printing a failed gate
+  raised `UnicodeEncodeError` — `examples/01-hello-tiny` died before its first
+  gate. `gates.py` returns ASCII now: a library must not hand its caller a
+  string the caller cannot print. The em dashes went too, since cp932, koi8-r
+  and ascii all reject them. **01's transcript changed**: `→` is `->` and `—`
+  is `--`.
+- The CLI and both examples now declare UTF-8 output instead of inheriting the
+  locale encoding, so the em dashes in their own prose survive as well.
 - Both hooks hardcoded `python3`, which Git Bash on Windows generally does not
   have. The guard swallowed the failure and matched an empty command, so it
   failed **open** — silently not guarding on the one platform where it is most

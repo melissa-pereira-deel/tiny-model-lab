@@ -35,10 +35,15 @@ from baseline import classify as baseline_classify
 from dialects import HELDOUT_DIALECTS, LABELS, TRAIN_DIALECTS, make_rows
 from features import ENCODERS, MAX_LEN, scalars
 
+from harness.__main__ import use_utf8_stdout
 from harness.experiment import Experiment, finish_run, record_eval, start_run
 from harness.gates import run_all
 from harness.profile import artifact_size_kb, latency_ms, summarize, tradeoff_row
 from harness.promote import promote
+
+# This prints em dashes, and Python otherwise inherits the locale encoding —
+# which raises UnicodeEncodeError under cp932, koi8-r or ascii. See #11.
+use_utf8_stdout()
 
 HERE = Path(__file__).parent
 random.seed(0)

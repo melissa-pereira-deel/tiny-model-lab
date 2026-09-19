@@ -29,7 +29,7 @@ you can prove it beat the four lines of code it replaced.
 
 > **⚠️ Status: early, and measured about it.**
 >
-> The harness, the gates, the CLI and both worked examples run today, with 165
+> The harness, the gates, the CLI and both worked examples run today, with 178
 > tests and CI on Python 3.10 and 3.12. The five subagents and six skills are
 > written and usable; they have not been evaluated at scale.
 >
@@ -125,7 +125,7 @@ baseline 'rule classifier (isspace/isdigit/isalnum/else)': 1.0000 on held-out
 
 --- eval: n=4000 ---
 [FAIL] baseline: candidate accuracy=0.9200 vs deterministic baseline 'rule classifier (isspace/isdigit/isalnum/else)'=1.0000 (higher is better)
-       → The baseline still wins. Do NOT tune hyperparameters yet — that is the expensive way to discover a scoping error. In order: (1) improve the input representation, which is where most tiny-model gains live; (2) check label quality on 20 disagreements by hand; (3) if neither moves it, write this up as a negative result and ship the baseline.
+       -> The baseline still wins. Do NOT tune hyperparameters yet -- that is the expensive way to discover a scoping error. In order: (1) improve the input representation, which is where most tiny-model gains live; (2) check label quality on 20 disagreements by hand; (3) if neither moves it, write this up as a negative result and ship the baseline.
 [PASS] size: artifact 0.1 KB vs budget 5.0 KB
 [PASS] latency: p95 0.0 ms vs 'instant' band ceiling 100 ms
 [PASS] patience: last 2 evals ['0.9200', '0.9200'] vs best-before 0.9040

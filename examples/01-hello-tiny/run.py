@@ -20,9 +20,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from harness.__main__ import use_utf8_stdout
 from harness.experiment import Experiment, finish_run, record_eval, start_run
 from harness.gates import run_all
 from harness.profile import latency_ms, summarize, tradeoff_row
+
+# This prints em dashes, and Python otherwise inherits the locale encoding —
+# which raises UnicodeEncodeError under cp932, koi8-r or ascii. See #11.
+use_utf8_stdout()
 
 HERE = Path(__file__).parent
 random.seed(0)
