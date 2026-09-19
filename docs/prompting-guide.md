@@ -1,39 +1,46 @@
 # How to prompt this agent
 
-Everything below exists in this repo. There are four commands and five
+Everything below exists in this repo. There are five commands and five
 subagents; nothing else is wired up.
 
-## The four commands
+## The five commands
+
+One per subagent, in pipeline order.
 
 | Command | Delegates to | Produces |
 |---|---|---|
 | `/scope <task>` | `task-triage` | `experiments/<slug>.yaml`, or a written refusal naming which rung of the ladder to use instead |
+| `/data <path>` | `data-builder` | a dataset with an untouchable held-out split, a named split unit, and a 20-example label audit |
 | `/experiment <path>` | `trainer` | a run directory and manifest, baseline measured first, gated after every eval |
 | `/gate <run>` | `evaluator` | every gate result plus the five design checks, ending in **promote** / **iterate** / **stop** |
 | `/ship <run>` | `embedder` | an export verified numerically at each hop, plus a `MODEL_CARD.md` |
 
-The fifth subagent, **`data-builder`**, has no command of its own. It is step 2
-in `AGENTS.md` — between triage and training — and you invoke it by name:
-*"use data-builder to build the dataset for experiments/stroke-shapes.yaml."*
-It handles teacher labelling, held-out splits, and label-quality audits.
+`/scope` is the only one that takes a free-form task. The rest take a path,
+because by then there is a file to point at.
 
 The subagents run with isolated context, which is the point: training logs and
 dataset dumps stay out of your main conversation, and what comes back is the
 verdict and the numbers.
 
-Three of the four have a command-line equivalent, which is what the subagent
-actually calls:
+Underneath, the commands call this — it is the part that is just Python, and
+you can use it without Claude Code at all:
 
 ```bash
 python -m harness init                      # scaffold a project
-python -m harness validate <experiment.yaml>
+python -m harness validate <experiment.yaml>   # /scope and /data end here
 python -m harness gate     <run-dir>
 python -m harness ship     <run-dir> <artifact> [--champion-dir DIR]
 ```
 
-You can use those without Claude Code at all. What you lose is the triage
-conversation, the isolated context, and the guard that refuses training when no
-experiment file exists — not the gates themselves.
+**There is no training subcommand, deliberately.** The harness core stays
+dependency-light — torch is an optional extra — so the training script belongs
+to your experiment, not to the harness. `/experiment` is the one command whose
+middle has no CLI equivalent, and `.claude/hooks/guard-experiment.sh` is what
+stands in for one: it refuses to run a training script when no experiment file
+exists.
+
+What you lose without Claude Code is the triage conversation and the isolated
+context, not the gates.
 
 ## Name the target and the constraint in the `/scope` prompt
 

@@ -19,7 +19,7 @@ Ties go to the baseline. It ships without weights.
 ## Order of operations
 
 1. `/scope <task>` → `task-triage` subagent → produces `experiments/<slug>.yaml` or a refusal
-2. `data-builder` → dataset with an untouchable held-out split
+2. `/data <experiment-path>` → `data-builder` subagent → dataset with an untouchable held-out split
 3. `/experiment <path>` → `trainer` subagent → baseline first, then the model
 4. `/gate <run>` → `evaluator` subagent → promote / iterate / stop
 5. `/ship <run>` → `embedder` subagent → export, verify numerically, write the model card

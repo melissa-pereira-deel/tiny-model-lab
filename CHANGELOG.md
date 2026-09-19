@@ -23,6 +23,10 @@ remediation is a `Changed`.
 
 ### Added
 
+- `/data <experiment-path>`, delegating to `data-builder`. It was the only
+  subagent without a command, despite being step 2 of five in `AGENTS.md` — so
+  the one step on the main path you had to know to invoke by name. Commands and
+  subagents are 1:1 now, and `tests/test_agent_surface.py` keeps them that way.
 - `python -m harness` — `init`, `validate`, `gate` and `ship` subcommands, plus
   a `tml` console script. `/gate` and `/ship` previously had no entry point, so
   every invocation re-improvised its own manifest loading.
