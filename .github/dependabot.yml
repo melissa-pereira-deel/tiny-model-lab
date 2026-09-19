@@ -1,0 +1,17 @@
+# The actions in ci.yml went three majors stale before a deprecation warning
+# made anyone look. The version numbers were the symptom; nobody watching was
+# the defect. This is the sensor for it.
+#
+# github-actions only. Not pip: the runtime dependency is PyYAML>=6.0 and the
+# extras carry deliberate floors, so bot PRs raising a floor nobody chose would
+# be noise rather than signal.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      # Monthly, not weekly. Two actions in one workflow is roughly a PR a
+      # quarter; anything more frequent trains you to ignore them.
+      interval: monthly
+    commit-message:
+      prefix: "ci"
