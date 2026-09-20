@@ -34,6 +34,13 @@ remediation is a `Changed`.
   — one working day, a judgement call and documented as one, unlike
   `LATENCY_BANDS_MS`. Its output is a finding, never a run: there is no
   `run_id` in the record and `gate` on a spike path exits 2.
+- `python -m harness spikes [directory]` — lists a project's spike records and
+  refuses the ones that are not yet one. Exit 1 on any problem, 0 with "no
+  spike records" when there are none, which is this repo's own answer. It
+  takes a directory rather than a path because the question it answers is
+  what is still open, and no single record answers that. Deliberately not in
+  CI or the pre-PR block: vacuous here, and a project using the harness is
+  where it earns a place.
 - `/data <experiment-path>`, delegating to `data-builder`. It was the only
   subagent without a command, despite being step 2 of five in `AGENTS.md` — so
   the one step on the main path you had to know to invoke by name. Commands and
