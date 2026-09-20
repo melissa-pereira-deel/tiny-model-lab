@@ -71,6 +71,18 @@ remediation is a `Changed`.
 
 ### Changed
 
+- The places that already demanded a measurement now say where it goes.
+  `/scope` and `task-triage` gain a third output: open spike records naming
+  the fields they will fill, instead of a contract carrying numbers nobody
+  measured — triage has no Bash, so it writes them and `/spike` runs them.
+  The 20-example label audit, stated in imperative voice in
+  `.claude/commands/data.md`, `.claude/agents/data-builder.md` and
+  `.claude/skills/dataset-synthesis/SKILL.md`, becomes
+  `experiments/<slug>-label-audit.spike.md` with `informs: dataset.teacher` —
+  **the same sentence in all three**, because three copies of one rule
+  drifting apart is the failure #14 was about. `experiments/README.md`
+  describes the third file type that lives there, and the bug-report template
+  lists `/spike`.
 - `.claude/hooks/guard-experiment.sh` says what it does about spikes. **The
   match patterns are unchanged and no gate got stricter** — the guard globs
   `experiments/*.yaml`, a spike record is `<slug>.spike.md`, and the two have

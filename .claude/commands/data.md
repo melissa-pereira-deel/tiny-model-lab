@@ -21,7 +21,9 @@ fills in the half of it that decides whether any later number means anything.
    set, where quality matters and volume does not.
 4. **Audit 20 examples by hand before anything is trained.** Every time. You
    will find label bugs, and no metric would have surfaced them until much
-   later and much more expensively.
+   later and much more expensively. Record it as
+   `experiments/<slug>-label-audit.spike.md` with `informs: dataset.teacher`,
+   so what you checked and what you found outlive the session.
 5. **Record provenance in the experiment file, gitignore the corpus.** Fill in
    `source`, `teacher`, `size` and `holdout_size` with what you actually did,
    not what was planned.
