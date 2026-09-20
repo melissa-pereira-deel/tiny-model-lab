@@ -65,6 +65,13 @@ remediation is a `Changed`.
 
 ### Changed
 
+- `.claude/hooks/guard-experiment.sh` says what it does about spikes. **The
+  match patterns are unchanged and no gate got stricter** — the guard globs
+  `experiments/*.yaml`, a spike record is `<slug>.spike.md`, and the two have
+  never met. What was missing was anything saying that on purpose, so
+  `tests/test_guard_hook.py` gained a `spiked_project` fixture proving a spike
+  record does not unlock training, and two entries pinning that spike code
+  runs free while a spike script named `*train*.py` still does not.
 - `validate` now checks the dataset: a `dataset` block must be present,
   `split_by` must name the unit generalisation has to cross, and `holdout_size`
   must be positive. A `split_by` naming a random split needs a written

@@ -20,6 +20,22 @@
 # Known limit: this is a filename-level check, not a dataflow one. It cannot
 # tell that experiments/a.yaml is the contract for experiments/b-train.py. It
 # is a tripwire against forgetting the step, not a proof of correctness.
+#
+# On spikes: a spike record is experiments/<slug>.spike.md, and the unlock
+# below globs experiments/*.yaml, so a spike does not unlock training. That is
+# the whole reason the record is Markdown — a spike is a measurement, not a
+# contract, and a file that authorised a training run by existing would be a
+# way around /scope rather than a step before it. The patterns here are
+# unchanged; tests/test_guard_hook.py's spiked_project fixture is what holds
+# the two apart, because nothing in this file mentions spikes at all.
+#
+# Spike *scripts* run free, which is deliberate: the point of a spike is to be
+# cheap. Two consequences worth knowing. A spike script named *train*.py is
+# still blocked, correctly — if your measurement trains something, it is an
+# experiment. And the *python*experiments/* pattern below means a script run
+# out of experiments/ is blocked whenever no contract exists, so spike code
+# lives elsewhere (spikes/, tools/, anywhere) while the spike record lives
+# here beside the contracts and the refusals.
 
 set -euo pipefail
 input=$(cat)
