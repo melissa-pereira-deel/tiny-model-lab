@@ -19,7 +19,7 @@ body:
         - .claude/hooks/ (the training guard, the session log)
         - .claude/agents/ (task-triage, data-builder, trainer, evaluator, embedder)
         - .claude/skills/
-        - .claude/commands/ (/scope, /data, /experiment, /gate, /ship)
+        - .claude/commands/ (/spike, /scope, /data, /experiment, /gate, /ship)
         - examples/
         - docs or README (including a claim that is wrong or stale)
         - packaging / CI

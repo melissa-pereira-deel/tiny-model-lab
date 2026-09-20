@@ -6,6 +6,7 @@ Usage:
   python -m harness gate     <run-dir>
   python -m harness ship     <run-dir> <artifact>
                              [--champion-dir DIR] [--ledger PATH]
+  python -m harness spikes   [directory]
 
 `ship` writes promotion state into this project by default: `champion/` and
 `runs/LEDGER.md`. `--champion-dir` moves both somewhere else, which is how
@@ -30,6 +31,7 @@ from .experiment import LATENCY_BANDS_MS, project_root
 from .gates import gate_run
 from .init import scaffold
 from .promote import promote
+from .spike import find_spikes, load_spike, spike_problems
 from .validate import validate
 
 DESIGN_CHECKS_NOTE = (
@@ -207,11 +209,59 @@ def cmd_ship(argv: list[str]) -> int:
     return 0 if result.startswith("PROMOTED") else 1
 
 
+def cmd_spikes(argv: list[str]) -> int:
+    """List the spike records in a project, and refuse the ones that are not yet one.
+
+    A directory rather than a path, because a spike is only useful next to the
+    others: the question is "what did we measure, and what is still open",
+    which no single file answers. `validate` takes paths for the opposite
+    reason -- there, the file is the unit.
+
+    Deliberately not in CI or the pre-PR block. This repo has no spikes of its
+    own and the check would be vacuous here; a project using the harness is
+    where it earns a place.
+    """
+    if len(argv) > 1:
+        print(__doc__)
+        return 2
+    root = Path(argv[0]) if argv else project_root()
+    records = find_spikes(root)
+    if not records:
+        print(f"no spike records in {root / 'experiments'}")
+        print(
+            "A spike is the measurement that gives a contract field its value, "
+            "or that decides whether to write a contract at all. Start one from "
+            "harness/templates/spike.md and save it as "
+            "<slug>.spike.md beside your contracts."
+        )
+        return 0
+
+    status = 0
+    for record in records:
+        problems = spike_problems(record)
+        if problems:
+            print(f"INVALID -- {record}")
+            for p in problems:
+                print(f"  - {p}")
+            status = 1
+            continue
+        spike = load_spike(record)
+        informs = spike["informs"]
+        informs = ", ".join(informs) if isinstance(informs, list) else informs
+        print(
+            f"{spike['status']!s:<9} {record} -- informs {informs}, "
+            f"{spike['budget_minutes']} min budget"
+        )
+    print(f"\n{len(records)} spike record(s). A spike is a finding, never a run.")
+    return status
+
+
 COMMANDS = {
     "init": cmd_init,
     "validate": cmd_validate,
     "gate": cmd_gate,
     "ship": cmd_ship,
+    "spikes": cmd_spikes,
 }
 
 

@@ -31,7 +31,7 @@ Random splits leak. The resulting number is real in your notebook and fictional 
 ## Non-negotiables
 
 - **Build the held-out set first, then do not look at it.** If you inspect it to debug, it is burned. Generate a fresh one and say so out loud.
-- **Audit 20 examples by hand before every training run.** You will find label bugs. You always find label bugs.
+- **Audit 20 examples by hand before every training run.** You will find label bugs. You always find label bugs. Record it as `experiments/<slug>-label-audit.spike.md` with `informs: dataset.teacher`, so what you checked and what you found outlive the session.
 - **Record provenance, gitignore the corpus.** Commit how the data was made, not the data.
 
 ## Reporting

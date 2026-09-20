@@ -64,6 +64,20 @@ def scoped_project(tmp_path: Path) -> Path:
     return tmp_path
 
 
+@pytest.fixture
+def spiked_project(tmp_path: Path) -> Path:
+    """A project holding a spike record and nothing else.
+
+    A spike record is `experiments/<slug>.spike.md`. The guard globs
+    `experiments/*.yaml`, so it must not count — see the tests below.
+    """
+    (tmp_path / SPEC_DIR.name).mkdir()
+    (tmp_path / SPEC_DIR.name / "tagger.spike.md").write_text(
+        "---\nquestion: q\ninforms: scope\n---\n"
+    )
+    return tmp_path
+
+
 BLOCKED_WITHOUT_A_SPEC = [
     "python train.py",
     "python my_train.py",
@@ -72,6 +86,9 @@ BLOCKED_WITHOUT_A_SPEC = [
     "uv run my_train.py",
     "./do_train.py",
     "cd src && python train.py",
+    # A spike script that trains is not a spike. The record does not change
+    # that, and neither does living outside experiments/.
+    "python spikes/train_probe.py",
 ]
 
 # Commands that merely *mention* training, or that the repo itself depends on.
@@ -83,6 +100,10 @@ ALWAYS_ALLOWED = [
     f"grep -rn foo {SPEC_DIR.name}/",
     "cat .claude/hooks/guard-experiment.sh",
     "ls -la",
+    # Spike code is meant to be cheap and to run without ceremony. It lives
+    # outside experiments/ precisely because the pattern above blocks scripts
+    # run from there while no contract exists.
+    "python spikes/bench.py",
 ]
 
 
@@ -99,6 +120,31 @@ def test_allows_the_same_command_once_scoped(command: str, scoped_project: Path)
 @pytest.mark.parametrize("command", ALWAYS_ALLOWED)
 def test_never_blocks_these(command: str, empty_project: Path) -> None:
     assert not run_guard(command, empty_project), f"should never block: {command}"
+
+
+@pytest.mark.parametrize("command", BLOCKED_WITHOUT_A_SPEC)
+def test_a_spike_record_does_not_unlock_training(command: str, spiked_project: Path) -> None:
+    """The test that makes the file format a decision rather than an accident.
+
+    A spike is a measurement, not a contract. If `experiments/<slug>.spike.md`
+    counted towards the guard's unlock, writing one would authorise a training
+    run without a named baseline, a size budget or a kill criterion -- a way
+    around /scope wearing the clothes of a step before it.
+
+    Nothing in `guard-experiment.sh` mentions spikes; it globs `*.yaml` and a
+    spike record is `.md`. That is the safest version of this -- no new
+    pattern to get wrong -- but it means the property is a coincidence of two
+    files unless something pins it. This is that something.
+    """
+    assert run_guard(command, spiked_project), f"a spike record must not unlock: {command}"
+
+
+def test_a_spike_record_alongside_a_contract_changes_nothing(
+    scoped_project: Path,
+) -> None:
+    """The other direction: it does not *lock* anything either."""
+    (scoped_project / SPEC_DIR.name / "tagger.spike.md").write_text("---\nquestion: q\n---\n")
+    assert not run_guard(TRAINING_COMMAND, scoped_project)
 
 
 def test_worked_example_runs_even_when_scoped(scoped_project: Path) -> None:

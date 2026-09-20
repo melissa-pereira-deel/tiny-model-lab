@@ -289,6 +289,78 @@ class TestShip:
         assert main(["ship"]) == 2
 
 
+class TestSpikes:
+    """`spikes` reads a directory, not a file.
+
+    The question it answers is "what did we measure, and what is still open",
+    which no single record answers -- so unlike `validate` it takes a project
+    root and globs. Exit 1 on any problem, because an agent branches on it.
+    """
+
+    FRONTMATTER = (
+        "question: Do at least 90% of the corpus chord symbols parse cleanly?\n"
+        "informs: dataset.teacher\n"
+        'threshold: ">= 0.90 on the first 10k rows"\n'
+        "if_not: hand-write the fifty commonest symbols instead of the mapping\n"
+        "budget_minutes: {budget}\n"
+        "status: open\n"
+        "elapsed_minutes: {elapsed}\n"
+    )
+
+    @classmethod
+    def project(cls, tmp_path: Path, body: str | None = None, **fields) -> Path:
+        spec_dir = tmp_path / "experiments"
+        spec_dir.mkdir(exist_ok=True)
+        if body is None:
+            body = cls.FRONTMATTER.format(budget=fields.get("budget", 120),
+                                          elapsed=fields.get("elapsed", 0))
+            body = f"---\n{body}---\n\n# a3\n"
+        (spec_dir / "a3-chord-parse.spike.md").write_text(body)
+        return tmp_path
+
+    def test_an_empty_project_is_not_a_failure(self, tmp_path: Path, capsys) -> None:
+        """Nothing to report is a fine answer, and it still says what a spike
+        is -- this is the first place most people meet the idea."""
+        (tmp_path / "experiments").mkdir()
+        assert main(["spikes", str(tmp_path)]) == 0
+        out = capsys.readouterr().out
+        assert "no spike records" in out
+        assert "spike.md" in out
+
+    def test_a_project_with_no_spec_directory_is_not_a_failure(self, tmp_path: Path) -> None:
+        assert main(["spikes", str(tmp_path)]) == 0
+
+    def test_a_good_record_passes_and_is_listed(self, tmp_path: Path, capsys) -> None:
+        assert main(["spikes", str(self.project(tmp_path))]) == 0
+        out = capsys.readouterr().out
+        assert "a3-chord-parse.spike.md" in out
+        assert "dataset.teacher" in out
+
+    def test_an_overrun_record_fails(self, tmp_path: Path, capsys) -> None:
+        project = self.project(tmp_path, budget=60, elapsed=200)
+        assert main(["spikes", str(project)]) == 1
+        assert "past budget_minutes" in capsys.readouterr().out
+
+    def test_a_malformed_record_fails_and_names_the_file(self, tmp_path: Path, capsys) -> None:
+        project = self.project(tmp_path, body="# a3\n\nI measured something once.\n")
+        assert main(["spikes", str(project)]) == 1
+        out = capsys.readouterr().out
+        assert "a3-chord-parse.spike.md" in out
+        assert "no YAML frontmatter" in out
+
+    def test_two_arguments_return_two(self, tmp_path: Path) -> None:
+        assert main(["spikes", str(tmp_path), str(tmp_path)]) == 2
+
+    def test_this_repo_has_no_spike_records(self, capsys) -> None:
+        """The documented verification, run as a test.
+
+        It is also the honest state of this repo: the concept ships before any
+        use of it, which is why `spikes` is deliberately not in CI.
+        """
+        assert main(["spikes", str(REPO_ROOT)]) == 0
+        assert "no spike records" in capsys.readouterr().out
+
+
 def test_module_entry_point_is_wired_up(tmp_path: Path) -> None:
     """One subprocess test that `python -m harness` actually runs.
 

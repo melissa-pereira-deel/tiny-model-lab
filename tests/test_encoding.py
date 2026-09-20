@@ -49,10 +49,19 @@ def test_the_worked_example_runs(encoding: str) -> None:
     assert "UnicodeEncodeError" not in proc.stderr
 
 
+# One invocation per subcommand that prints prose rather than arithmetic.
+# `spikes` joined the list the day it was added: its refusals are long English
+# sentences, which is exactly the shape of output that broke cp932 before.
+CLI_INVOCATIONS = {
+    "validate": ["-m", "harness", "validate", "examples/01-hello-tiny/experiment.yaml"],
+    "spikes": ["-m", "harness", "spikes"],
+}
+
+
 @pytest.mark.parametrize("encoding", HOSTILE_ENCODINGS)
-def test_the_cli_runs(encoding: str) -> None:
-    spec = "examples/01-hello-tiny/experiment.yaml"
-    proc = run(["-m", "harness", "validate", spec], encoding)
+@pytest.mark.parametrize("args", CLI_INVOCATIONS.values(), ids=list(CLI_INVOCATIONS))
+def test_the_cli_runs(encoding: str, args: list[str]) -> None:
+    proc = run(args, encoding)
     assert proc.returncode == 0, f"{encoding}: {proc.stderr.strip().splitlines()[-1:]}"
     assert "UnicodeEncodeError" not in proc.stderr
 

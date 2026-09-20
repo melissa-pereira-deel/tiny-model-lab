@@ -29,8 +29,8 @@ you can prove it beat the four lines of code it replaced.
 
 > **⚠️ Status: early, and measured about it.**
 >
-> The harness, the gates, the CLI and both worked examples run today, with 194
-> tests and CI on Python 3.10 and 3.14 across Ubuntu and Windows. The five
+> The harness, the gates, the CLI and both worked examples run today, with 316
+> tests and CI on Python 3.10 and 3.14 across Ubuntu and Windows. The six
 > commands, five subagents and six skills are written and usable; they have not
 > been evaluated at scale.
 >
@@ -99,6 +99,7 @@ That rule is a strict `>` in `harness/gates.py`, and everything else in this
 repo exists to enforce it.
 
 ```
+/spike       (no subagent)  →  one cheap measurement, so a field carries a real number
 /scope       task-triage    →  should this be a model at all?
 /data        data-builder   →  labels, and a held-out split that does not leak
 /experiment  trainer        →  baseline first, then the model, budgets enforced
@@ -240,6 +241,7 @@ commands:
 
 ```bash
 python -m harness validate experiments/my-task.yaml
+python -m harness spikes                       # what you measured, what is still open
 python -m harness gate     runs/20260918T2114Z--my-task
 python -m harness ship     runs/20260918T2114Z--my-task model.onnx
 ```
@@ -286,20 +288,21 @@ that faked them would be worse than one that admits the gap.
   agents/      5 subagents: task-triage, data-builder, trainer, evaluator, embedder
   skills/      6 skills: triage, dataset synthesis, architecture, quantization,
                export, and design-eval
-  commands/    /scope  /data  /experiment  /gate  /ship — one per subagent
+  commands/    /scope  /data  /experiment  /gate  /ship — one per subagent,
+               plus /spike, which runs in the main conversation
   hooks/       refuses training without an experiment file; logs sessions
-harness/       the contract, the gates, profiling, promotion, CLI — plain Python
-               plus templates/, so they ship with the package
+harness/       the contract, the spike, the gates, profiling, promotion, CLI —
+               plain Python plus templates/, so they ship with the package
 docs/          concepts, harness design, stop conditions, do's and don'ts,
                how to prompt the agent
 examples/      01 dependency-free in a second; 02 trains, exports, quantizes
-tests/         194 of them, including the hooks and the gate arithmetic
+tests/         316 of them, including the hooks and the gate arithmetic
 CHANGELOG.md   what changed, with gate semantics as its own category — a
                stricter gate invalidates a run that already passed
 ```
 
 Two pages worth reading before you start. **[How to prompt this
-agent](docs/prompting-guide.md)** — the five commands, the five subagents, and
+agent](docs/prompting-guide.md)** — the six commands, the five subagents, and
 why naming your deployment target inside a `/scope` prompt saves a round trip.
 **[Do's and don'ts](docs/dos-and-donts.md)** — the rules that are actually
 enforced, each pointing at the file that enforces it.

@@ -23,6 +23,30 @@ remediation is a `Changed`.
 
 ### Added
 
+- The spike — `harness/spike.py` and `harness/templates/spike.md`. A spike is
+  the measurement that gives a contract field its value, or that decides
+  whether a contract should be written at all; the record is
+  `experiments/<slug>.spike.md`, committed beside the contracts and the
+  refusals. `informs` is checked against the flattened keys of
+  `harness/templates/experiment.yaml` read at runtime, plus the literal
+  `scope`, so the kinds of spike come from the contract rather than from a
+  list somebody has to keep in step with it. `budget_minutes` is capped at 480
+  — one working day, a judgement call and documented as one, unlike
+  `LATENCY_BANDS_MS`. Its output is a finding, never a run: there is no
+  `run_id` in the record and `gate` on a spike path exits 2.
+- `python -m harness spikes [directory]` — lists a project's spike records and
+  refuses the ones that are not yet one. Exit 1 on any problem, 0 with "no
+  spike records" when there are none, which is this repo's own answer. It
+  takes a directory rather than a path because the question it answers is
+  what is still open, and no single record answers that. Deliberately not in
+  CI or the pre-PR block: vacuous here, and a project using the harness is
+  where it earns a place.
+- `/spike <question or path>` — the sixth command, and the only one that does
+  not delegate to a subagent. Isolated context exists to keep training logs
+  out of the conversation; a spike's output is one sentence and one number, so
+  there is nothing to isolate. It writes the record before measuring, stops at
+  `budget_minutes`, never calls `start_run()`, and hands back to `/scope` when
+  a question turns out to be an experiment.
 - `/data <experiment-path>`, delegating to `data-builder`. It was the only
   subagent without a command, despite being step 2 of five in `AGENTS.md` — so
   the one step on the main path you had to know to invoke by name. Commands and
@@ -47,6 +71,25 @@ remediation is a `Changed`.
 
 ### Changed
 
+- The places that already demanded a measurement now say where it goes.
+  `/scope` and `task-triage` gain a third output: open spike records naming
+  the fields they will fill, instead of a contract carrying numbers nobody
+  measured — triage has no Bash, so it writes them and `/spike` runs them.
+  The 20-example label audit, stated in imperative voice in
+  `.claude/commands/data.md`, `.claude/agents/data-builder.md` and
+  `.claude/skills/dataset-synthesis/SKILL.md`, becomes
+  `experiments/<slug>-label-audit.spike.md` with `informs: dataset.teacher` —
+  **the same sentence in all three**, because three copies of one rule
+  drifting apart is the failure #14 was about. `experiments/README.md`
+  describes the third file type that lives there, and the bug-report template
+  lists `/spike`.
+- `.claude/hooks/guard-experiment.sh` says what it does about spikes. **The
+  match patterns are unchanged and no gate got stricter** — the guard globs
+  `experiments/*.yaml`, a spike record is `<slug>.spike.md`, and the two have
+  never met. What was missing was anything saying that on purpose, so
+  `tests/test_guard_hook.py` gained a `spiked_project` fixture proving a spike
+  record does not unlock training, and two entries pinning that spike code
+  runs free while a spike script named `*train*.py` still does not.
 - `validate` now checks the dataset: a `dataset` block must be present,
   `split_by` must name the unit generalisation has to cross, and `holdout_size`
   must be positive. A `split_by` naming a random split needs a written
