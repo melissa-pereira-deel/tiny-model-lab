@@ -23,6 +23,17 @@ remediation is a `Changed`.
 
 ### Added
 
+- The spike — `harness/spike.py` and `harness/templates/spike.md`. A spike is
+  the measurement that gives a contract field its value, or that decides
+  whether a contract should be written at all; the record is
+  `experiments/<slug>.spike.md`, committed beside the contracts and the
+  refusals. `informs` is checked against the flattened keys of
+  `harness/templates/experiment.yaml` read at runtime, plus the literal
+  `scope`, so the kinds of spike come from the contract rather than from a
+  list somebody has to keep in step with it. `budget_minutes` is capped at 480
+  — one working day, a judgement call and documented as one, unlike
+  `LATENCY_BANDS_MS`. Its output is a finding, never a run: there is no
+  `run_id` in the record and `gate` on a spike path exits 2.
 - `/data <experiment-path>`, delegating to `data-builder`. It was the only
   subagent without a command, despite being step 2 of five in `AGENTS.md` — so
   the one step on the main path you had to know to invoke by name. Commands and
