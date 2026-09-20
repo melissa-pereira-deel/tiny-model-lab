@@ -59,6 +59,16 @@ and therefore the only time it works.
 **Don't submit a one-word hypothesis.** `validate.py` requires at least five
 words, on the grounds that a hypothesis you cannot falsify is not one.
 
+**Don't fill a contract field with a number nobody measured.** Write an open
+`experiments/<slug>.spike.md` instead and answer it — `harness/spike.py`
+refuses a record without a question, a threshold, a named consequence and a
+budget of at most 480 minutes, and `python -m harness spikes` is what runs the
+refusal. `informs:` is checked against the flattened keys of
+`harness/templates/experiment.yaml` read at runtime, so the field you claim to
+be measuring has to be a field the contract actually has. The 480-minute
+ceiling is a judgement call and `harness/spike.py` says so in as many words —
+unlike `LATENCY_BANDS_MS`, there is no literature behind it.
+
 ## Running
 
 **Don't extend patience mid-run to rescue a plateau.** `patience_gate` stops
@@ -76,6 +86,16 @@ passes once `split_rationale` names the grouping unit that does not exist.
 Note what the check cannot do: it reads the label, not the split. This rule was
 added because `examples/01-hello-tiny` declared `split_by: "document"` for a
 corpus of standalone generated strings and passed validation.
+
+**Don't let a spike turn into a run.** A spike record is a measurement and
+only a contract may authorise training. `.claude/hooks/guard-experiment.sh`
+globs `experiments/*.yaml`, so `<slug>.spike.md` unlocks nothing, and
+`tests/test_guard_hook.py::test_a_spike_record_does_not_unlock_training` is
+what keeps that true rather than coincidental. From the other end, `load_run`
+in `harness/experiment.py` raises without a `manifest.json`, so
+`python -m harness gate` on a spike path exits 2. If the question needs an
+eval loop, a second variant or a wallclock, it is an experiment: run `/scope`
+and write the contract.
 
 **Don't report agreement with a teacher as correctness.** `CONTRIBUTING.md`
 calls this out as the most common dishonesty in the field. If your labels come

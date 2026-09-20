@@ -19,6 +19,7 @@ Ties go to the baseline. It ships without weights.
 ## Order of operations
 
 1. `/scope <task>` → `task-triage` subagent → produces `experiments/<slug>.yaml` or a refusal
+   - Where a contract field would otherwise carry a number nobody measured, triage writes an open `experiments/<slug>.spike.md` instead — one question, one threshold, what changes if the answer is no, and a box of at most 480 minutes. `/spike <question or path>` runs it; `python -m harness spikes` checks them. A spike produces a finding, never a run.
 2. `/data <experiment-path>` → `data-builder` subagent → dataset with an untouchable held-out split
 3. `/experiment <path>` → `trainer` subagent → baseline first, then the model
 4. `/gate <run>` → `evaluator` subagent → promote / iterate / stop
@@ -56,6 +57,7 @@ or stop. A new seed is not a structural change.
 
 ## Conventions
 
+- `experiments/` holds three kinds of committed file: contracts (`<slug>.yaml`), refusals (`<slug>-refused.md`) and spike records (`<slug>.spike.md`). Only the first unlocks training
 - `runs/` holds manifests; corpora and checkpoints are gitignored
 - `champion/` holds exactly one promoted model, changed only via `harness/promote.py`
 - Provenance is committed; artifacts are not

@@ -32,6 +32,23 @@ Böckeler warns against having only one kind. Feedback-only keeps repeating the
 same mistakes. Feedforward-only encodes rules but never learns whether they
 worked. You need both.
 
+**Where the spike sits, precisely.** A spike record is a *guide*. It steers
+before the measurement — the threshold is written while the number does not
+exist and cannot talk you into a different one — and it is inferential,
+because only a reader can say whether the finding actually met the threshold.
+`python -m harness spikes` is a *computational sensor*, but the thing it
+senses is the guide, not a run: it checks that the record is complete, that
+`informs` names a field the contract has, and that the box was not quietly
+widened after the fact. It cannot check that the measurement was honest, and
+`harness/spike.py` says so in the refusal itself — the same admission
+`validate.py` makes about reading a label rather than a split.
+
+So this does **not** fill the empty computational-guide cell, and it would be
+worth very little if it claimed to. A computational guide would be something
+that stops you before the mistake using arithmetic rather than prose; a
+checker that reads a form you already filled in is a sensor, whatever the form
+is about.
+
 ## Why gates, specifically
 
 The dominant failure mode of agent-driven ML is not bad code. It is a
@@ -78,3 +95,15 @@ a different failure mode.
 Beyond that, more tools measurably degrade tool selection. Anthropic's own
 guidance is that the most successful implementations use simple, composable
 patterns rather than complex frameworks. Five is already generous.
+
+`/spike` is the sixth command and deliberately has no sixth subagent. Its
+output is one sentence and one number, so there is nothing to isolate, and
+isolating it would cost the surrounding context that makes a finding mean
+anything.
+
+That argument has a stated assumption: it holds while spikes stay small. A
+project whose questions are all data-crunching — parse a million rows, profile
+a corpus — will feel the context cost in the main conversation, and should
+give `/spike` a subagent at that point. Saying so here is better than
+pretending the question is settled, because the answer depends on a property
+of your project rather than of this harness.
