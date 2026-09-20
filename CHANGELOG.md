@@ -79,6 +79,13 @@ remediation is a `Changed`.
 
 ### Fixed
 
+- The sibling-project link called `On-Device ML Optimization` a *lens*. That
+  repo draws a line between 19 thinking lenses, for deciding what to build, and
+  7 engineering skills, for building it well — and it is one of the seven. The
+  link now names the category correctly and names the second, stronger seam:
+  `Performance as Experience` draws the same 100 ms boundary as
+  `LATENCY_BANDS_MS`, from the same literature, while binning the rest
+  differently.
 - Gate output was not printable on a default Windows console. `GateResult`
   returned a U+2192 arrow, which is not in cp1252, so printing a failed gate
   raised `UnicodeEncodeError` — `examples/01-hello-tiny` died before its first
