@@ -323,8 +323,8 @@ Advice, not requirements. Nothing in `harness/` checks your hardware.
 - Miller (1968) and Nielsen (1993) on response times — the 100 ms / 1 s / 10 s bands, unchanged in fifty years
 
 Sibling project: [creative-technologist-agent](https://github.com/melissa-pereira-deel/creative-technologist-agent)
-— 19 thinking lenses for deciding *what* to build, plus 7 engineering skills for
-building it well. Two of them meet this repo. [On-Device ML
+— named thinking lenses for deciding *what* to build, plus engineering skills
+for building it well. Two of them meet this repo. [On-Device ML
 Optimization](https://github.com/melissa-pereira-deel/creative-technologist-agent/blob/main/skills/on-device-ml/SKILL.md)
 covers quantization, the Core ML pipeline and Neural Engine constraints — where
 the question gets asked; here is where the answer gets a number. And

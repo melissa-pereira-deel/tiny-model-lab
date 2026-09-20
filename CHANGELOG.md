@@ -80,9 +80,11 @@ remediation is a `Changed`.
 ### Fixed
 
 - The sibling-project link called `On-Device ML Optimization` a *lens*. That
-  repo draws a line between 19 thinking lenses, for deciding what to build, and
-  7 engineering skills, for building it well — and it is one of the seven. The
-  link now names the category correctly and names the second, stronger seam:
+  repo draws a line between thinking lenses, for deciding what to build, and
+  engineering skills, for building it well — and it is one of the latter. The
+  link now names the category correctly, and counts nothing: a number in this
+  repo about another repo's inventory has no sensor behind it, and theirs had
+  already drifted. It also names the second, stronger seam:
   `Performance as Experience` draws the same 100 ms boundary as
   `LATENCY_BANDS_MS`, from the same literature, while binning the rest
   differently.
