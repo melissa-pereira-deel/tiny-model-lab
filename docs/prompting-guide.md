@@ -1,22 +1,27 @@
 # How to prompt this agent
 
-Everything below exists in this repo. There are five commands and five
+Everything below exists in this repo. There are six commands and five
 subagents; nothing else is wired up.
 
-## The five commands
+## The six commands
 
-One per subagent, in pipeline order.
+Five of them are one per subagent, in pipeline order. `/spike` is the sixth
+and runs in the main conversation — its output is one sentence and one number,
+so isolating it would buy nothing.
 
 | Command | Delegates to | Produces |
 |---|---|---|
+| `/spike <question or path>` | nothing — the main agent | `experiments/<slug>.spike.md`: one question, one threshold written before the measurement, and what changes if the answer is no |
 | `/scope <task>` | `task-triage` | `experiments/<slug>.yaml`, or a written refusal naming which rung of the ladder to use instead |
 | `/data <path>` | `data-builder` | a dataset with an untouchable held-out split, a named split unit, and a 20-example label audit |
 | `/experiment <path>` | `trainer` | a run directory and manifest, baseline measured first, gated after every eval |
 | `/gate <run>` | `evaluator` | every gate result plus the five design checks, ending in **promote** / **iterate** / **stop** |
 | `/ship <run>` | `embedder` | an export verified numerically at each hop, plus a `MODEL_CARD.md` |
 
-`/scope` is the only one that takes a free-form task. The rest take a path,
-because by then there is a file to point at.
+`/scope` and `/spike` are the two that take free-form English — a task and a
+question. The rest take a path, because by then there is a file to point at.
+`/spike` takes a path too, when `/scope` has already written the record and
+left it open: triage has no Bash and can never run one.
 
 The subagents run with isolated context, which is the point: training logs and
 dataset dumps stay out of your main conversation, and what comes back is the
@@ -28,6 +33,7 @@ you can use it without Claude Code at all:
 ```bash
 python -m harness init                      # scaffold a project
 python -m harness validate <experiment.yaml>   # /scope and /data end here
+python -m harness spikes                    # /spike ends here
 python -m harness gate     <run-dir>
 python -m harness ship     <run-dir> <artifact> [--champion-dir DIR]
 ```
@@ -123,6 +129,12 @@ that means for whether the snap needs a visible transition.
   learning-rate sweep puts you in an argument with the harness.
 - **Don't ask `/ship` to export an unpromoted run.** It checks
   `champion/champion.json` and refuses.
+- **Don't ask `/spike` to train.** A spike is one measurement against one
+  threshold; a run manifest carries a comparison. `/spike` will not call
+  `start_run()` or a `*train*.py`, and when a question grows into an
+  experiment it is instructed to stop and hand you to `/scope`. `python -m
+  harness gate` on a spike path exits 2, which is the same answer from the
+  other end.
 
 ## If you are new here
 

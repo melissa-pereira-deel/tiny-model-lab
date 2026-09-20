@@ -41,6 +41,12 @@ remediation is a `Changed`.
   what is still open, and no single record answers that. Deliberately not in
   CI or the pre-PR block: vacuous here, and a project using the harness is
   where it earns a place.
+- `/spike <question or path>` — the sixth command, and the only one that does
+  not delegate to a subagent. Isolated context exists to keep training logs
+  out of the conversation; a spike's output is one sentence and one number, so
+  there is nothing to isolate. It writes the record before measuring, stops at
+  `budget_minutes`, never calls `start_run()`, and hands back to `/scope` when
+  a question turns out to be an experiment.
 - `/data <experiment-path>`, delegating to `data-builder`. It was the only
   subagent without a command, despite being step 2 of five in `AGENTS.md` — so
   the one step on the main path you had to know to invoke by name. Commands and
