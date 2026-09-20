@@ -17,7 +17,15 @@ keywords = ["tiny-models", "on-device", "edge-ai", "design-engineering", "claude
 # redundant now that `license` carries an SPDX expression.
 classifiers = [
   "Development Status :: 3 - Alpha",
+  # Per-version, because "Python :: 3" alone is honest and useless — it tells
+  # a reader on PyPI nothing they could act on. CI tests the ends of this
+  # range, 3.10 and 3.14; the versions between are bracketed, not unclaimed.
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = ["PyYAML>=6.0"]
@@ -65,6 +73,9 @@ harness = ["templates/*"]
 
 [tool.ruff]
 line-length = 100
+# Tracks requires-python deliberately, and stays at py310 while that does.
+# Raising it would have `UP` start rewriting code into idioms the declared
+# floor cannot run — a lint that quietly breaks the support claim above.
 target-version = "py310"
 
 # Pinned explicitly. Ruff's *default* rule set has grown over releases, so a

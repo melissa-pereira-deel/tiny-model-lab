@@ -21,6 +21,23 @@ Also valuable:
 - State what a metric actually measures. Agreement with a teacher tool is not objective correctness, and conflating the two is the most common dishonesty in this field.
 - Keep the harness core dependency-light. Heavy dependencies go in optional extras.
 
+## Which Pythons this supports
+
+The floor is **3.10**, and it stays there while a supported LTS still ships it —
+Ubuntu 22.04 has security maintenance until May 2027. 3.10 reaching end of life
+upstream is not by itself a reason to raise it: the core is PyYAML plus the
+standard library, nothing here uses 3.11+ syntax, and `requires-python` is the
+one field where a bump breaks people who already installed.
+
+Raise it when something concrete wants it — a feature the code would actually
+use, or a dependency that drops the version — not on the calendar. Three places
+move together when it does: `requires-python`, ruff's `target-version`, and the
+CI matrix.
+
+CI tests the **ends** of the range, currently 3.10 and 3.14, rather than every
+version in it. A leg in the middle that has never disagreed with either end is
+a leg you are paying for.
+
 ## Skills and subagents
 
 Follow the existing shape: YAML frontmatter with `name` and `description`, where

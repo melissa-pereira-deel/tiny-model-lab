@@ -51,8 +51,9 @@ body:
       label: Python version and OS
       description: >-
         The harness core supports Python 3.10+ and has no hardware-specific
-        code; CI runs 3.10 and 3.12 on Ubuntu and Windows. Say what you are
-        actually on — Linux, Windows and Intel Macs are all normal answers here.
+        code; CI runs the ends of that range, 3.10 and 3.14, on Ubuntu and
+        Windows. Say what you are actually on — Linux, Windows and Intel Macs
+        are all normal answers here, and so is a version between the two ends.
       placeholder: "3.12.4 on Ubuntu 24.04 — or 3.10, Windows 11"
     validations:
       required: true

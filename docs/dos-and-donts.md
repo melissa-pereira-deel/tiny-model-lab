@@ -132,6 +132,7 @@ ruff check .
 pytest -q
 ```
 
-All four run in CI (`.github/workflows/ci.yml`) on Python 3.10 and 3.12, which
-also parse-checks the blank template — the one file that cannot be validated,
-because being invalid is its job.
+All four run in CI (`.github/workflows/ci.yml`) on Python 3.10 and 3.14 — the
+ends of the supported range — across Ubuntu and Windows. CI also parse-checks
+the blank template, the one file that cannot be validated, because being
+invalid is its job.

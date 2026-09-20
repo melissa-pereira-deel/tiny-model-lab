@@ -68,6 +68,14 @@ remediation is a `Changed`.
   deprecated Node 20 runtime, and now on Windows as well as Ubuntu. The claim
   that the harness core has no OS-specific code had one OS of evidence behind
   it. The hooks are bash, so their tests skip on Windows deliberately.
+- The CI matrix tests **3.10 and 3.14** — the ends of the supported range —
+  rather than 3.10 and 3.12. `requires-python` stays at `>=3.10` past that
+  version's end of life: nothing here uses 3.11+ syntax and Ubuntu 22.04 LTS
+  ships 3.10 with security maintenance to May 2027. The untested end turned out
+  to be the new one, since 3.14 is what this repo is developed on. The policy
+  is written down in `CONTRIBUTING.md` so it is not re-argued every October.
+- `pyproject.toml` declares per-version classifiers. `Python :: 3` alone was
+  honest and useless.
 
 ### Fixed
 

@@ -22,7 +22,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: ["3.10", "3.12"]
+        # The ends of the declared range, not a sample from the middle.
+        #
+        # 3.10 stays past its 2026-10 end of life on purpose (#17): nothing
+        # here wants 3.11+ syntax, and Ubuntu 22.04 LTS ships 3.10 with
+        # security maintenance to May 2027. requires-python tracks this.
+        #
+        # 3.14 is here because it is what this repo is developed on daily -
+        # 02's README cites numbers from it - and CI had never run it. The
+        # untested end was the new one, not the old one.
+        python-version: ["3.10", "3.14"]
     # Windows would otherwise run these in PowerShell, where the globs and
     # `shopt -s nullglob` below are not a language.
     defaults:
