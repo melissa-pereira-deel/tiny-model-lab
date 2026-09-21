@@ -228,6 +228,28 @@ remediation is a `Changed`.
 
 ### Fixed
 
+- `.gitignore` covers what an example leaves behind when it promotes (#28).
+  Lines 6-9 (`champion/*.onnx` and friends) each contain a slash, so git
+  anchors them to the repo root; they never reached `examples/*/champion/`, and
+  nothing matched `champion.json` or `LEDGER.md` anywhere. A successful
+  promotion inside `examples/02-config-lexer` left three untracked files and
+  would have failed CI's clean-tree check — on the day the news was that the
+  model had finally beaten its baseline. Reproduced before fixing, by forcing
+  that promotion.
+
+  `examples/*/champion/` is ignored **whole**, cards and ledgers included,
+  unlike the root where those are tracked on purpose. An example's promotion
+  history is output, rewritten every CI run; it is not this repo's decision
+  trail. Same reasoning as `examples/*/runs/`, which ignores manifests for the
+  same reason.
+
+  `tests/test_gitignore.py` is new and asks git rather than reading the
+  patterns — the reasoning about anchoring is what was wrong. It pins both
+  halves: an example's promotion output is ignored, **and** the root's
+  `champion.json`, `LEDGER.md` and manifests are not. The second half is the
+  load-bearing one. The obvious way to close a gap like this is to broaden the
+  rule to `**/champion/`, which would silently stop tracking the record of what
+  was ever actually best.
 - `examples/02-config-lexer` promotes the int8 artifact it gated, not the fp32
   one it quantized from (#27). The run records three evals, the last being the
   int8 quantization, and `promote()` reads the last eval — but the call passed

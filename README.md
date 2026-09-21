@@ -29,7 +29,7 @@ you can prove it beat the four lines of code it replaced.
 
 > **⚠️ Status: early, and measured about it.**
 >
-> The harness, the gates, the CLI and both worked examples run today, with 372
+> The harness, the gates, the CLI and both worked examples run today, with 393
 > tests and CI on Python 3.10 and 3.14 across Ubuntu and Windows. The six
 > commands, five subagents and six skills are written and usable; they have not
 > been evaluated at scale.
@@ -300,7 +300,7 @@ harness/       the contract, the spike, the gates, profiling, promotion, CLI —
 docs/          concepts, harness design, stop conditions, do's and don'ts,
                how to prompt the agent
 examples/      01 dependency-free in a second; 02 trains, exports, quantizes
-tests/         372 of them, including the hooks and the gate arithmetic
+tests/         393 of them, including the hooks and the gate arithmetic
 CHANGELOG.md   what changed, with gate semantics as its own category — a
                stricter gate invalidates a run that already passed
 ```
