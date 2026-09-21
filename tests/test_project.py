@@ -171,11 +171,19 @@ class TestPackaging:
 
         It cannot reach harmonic-parser, which copied LICENSE verbatim and is
         a different repository. That one is kept in step by hand.
+
+        Read as UTF-8 explicitly, not because it is tidy. `read_text()` with
+        no encoding inherits the locale's, which on a default Windows console
+        is cp1252 -- and README.md's status block opens with a U+26A0 U+FE0F
+        warning sign whose last byte is 0x8F, one of the five bytes cp1252
+        leaves undefined. The first version of this test passed everywhere
+        except both Windows legs of CI. Same family as #11, which fixed the
+        output side and left the input side alone.
         """
         author = "Melissa de Britto"
         superseded = "Melissa Pereira"
         for name in ("LICENSE", "pyproject.toml", "README.md"):
-            text = (REPO_ROOT / name).read_text()
+            text = (REPO_ROOT / name).read_text(encoding="utf-8")
             assert author in text, f"{name} does not name the author as {author!r}"
             assert superseded not in text, (
                 f"{name} still carries the superseded spelling {superseded!r}. "
