@@ -41,6 +41,15 @@ DESIGN_CHECKS_NOTE = (
     "promote / iterate / stop call yourself. This reports gates, not judgement."
 )
 
+SELF_REPORTED_NOTE = (
+    "Every number above is the runner's. A manifest records what a runner put "
+    "in it, and nothing here has an artifact to check it against — mid-run "
+    "there usually is not one yet. `ship` takes the artifact as an argument, "
+    "so it re-measures the size against the bytes on disk and can refuse a run "
+    "this command passed. Accuracy and p95 cannot be recovered from a file at "
+    "all; those stay on trust."
+)
+
 
 def use_utf8_stdout() -> None:
     """Say what encoding this program's output is in, rather than inheriting.
@@ -132,6 +141,7 @@ def cmd_gate(argv: list[str]) -> int:
             "this latency supports — change the UI, not only the model."
         )
 
+    print(f"\n{SELF_REPORTED_NOTE}")
     print(f"\n{DESIGN_CHECKS_NOTE}")
     print(f"\n{'ALL GATES PASS' if passed else 'GATES FAIL'} — {run_dir}")
     return 0 if passed else 1
