@@ -20,6 +20,19 @@ remediation is a `Changed`.
   zero. Previously a baseline that never arrived was compared as a real number,
   so every positive candidate "beat" it — the exact comparison this harness
   exists to prevent. Strictly stricter: a run that passed can now fail.
+- `baseline_gate` refuses a run whose `baseline.metric` reads like something
+  you minimise — loss, perplexity, WER, RMSE — when `baseline.higher_is_better`
+  is unset, instead of assuming higher. Previously every gate assumed higher
+  and **no CLI path could say otherwise**: `gate_run` did not accept the
+  parameter and `cmd_ship` never passed it, so `python -m harness gate` and
+  `python -m harness ship` compared backwards for any loss. A model scoring
+  worse than the baseline passed, printed `PASS`, and promoted; `patience_gate`
+  read a rising loss as improvement; and each promotion installed an incumbent
+  worse than the last. Strictly stricter, and #23.
+
+  Unlike the entry above, **this invalidates nothing in this repo.** Both
+  examples, the template and every local manifest use `accuracy`, which is
+  unaffected. The runs it would have caught are ones nobody here has written.
 
 ### Added
 
@@ -101,6 +114,28 @@ remediation is a `Changed`.
   only usable adoption model was living inside a clone.
 - `Baseline` gained `measured_at_runtime`, and `validate` accepts a `0.0`
   baseline only when it is set. See Gate semantics above for the other half.
+- `Baseline` gained `higher_is_better: bool | None`, and `validate` refuses a
+  loss-shaped `metric` with it unset. See Gate semantics above for the other
+  half.
+
+  `None` — nobody said — is the default and resolves to higher, so every
+  existing contract and manifest behaves exactly as before. The three-valued
+  type is what gives the refusal an escape: a plain `bool` cannot tell "I mean
+  higher" from "I did not think about it", and a refusal with no escape would
+  be this validator's first.
+
+  The direction lives in the contract rather than in a CLI flag so that a
+  manifest can still be re-gated correctly a year later. The gates each read
+  it off the experiment they already receive, which is why `gate_run`,
+  `cmd_gate` and `cmd_ship` needed no change at all. `baseline_gate`,
+  `patience_gate`, `run_all`, `evaluate_promotion` and `promote` keep their
+  `higher_is_better` parameter as an override; it now defaults to `None`,
+  meaning *ask the contract*.
+- `baseline_gate`'s zero-baseline remediation, and its paraphrase in
+  `docs/dos-and-donts.md`, now offer `higher_is_better: false` alongside the
+  older advice to restate the metric in the direction where zero is not the
+  answer. Both changed together, because one rule living in two files is how
+  they drift.
 - The size gate's remediation tries post-training quantization at int8 before
   quantization-aware training, matching the `quantization-strategy` skill, and
   names the declared target rather than a fixed ladder of bit widths. Text only;

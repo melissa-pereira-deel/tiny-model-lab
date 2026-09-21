@@ -43,8 +43,17 @@ number arrives later, not permission to skip it. `baseline_gate` in
 `harness/gates.py` refuses any run whose baseline still reads 0.0 when the gates
 run, before it computes the comparison at all — because a 0.0 baseline is one
 every candidate "beats", which is precisely the false result this harness exists
-to prevent. If your measurement genuinely is 0.0, state the metric in the
-direction where it isn't: accuracy 1.0, not error 0.0.
+to prevent. If your measurement genuinely is 0.0, either declare
+`baseline.higher_is_better: false` and keep the metric you have, or state it in
+the direction where zero is not the answer: accuracy 1.0, not error 0.0.
+
+**Don't leave the metric's direction to chance.** If `baseline.metric` reads
+like something you minimise — loss, perplexity, WER, RMSE — `baseline_gate`
+refuses the run until `baseline.higher_is_better` says which way it goes.
+Every gate assumed higher-is-better and no CLI path could say otherwise, so a
+model scoring *worse* than the baseline passed and was promoted, silently.
+The check reads the metric's name rather than the metric, and says so; the
+declaration is what tells it. Declaring `true` is a valid answer.
 
 **Don't look for a `kind: none` baseline.** `Baseline.VALID_KINDS` in
 `harness/experiment.py` allows `deterministic`, `classical`, `existing_tool`,

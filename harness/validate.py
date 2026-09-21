@@ -90,6 +90,17 @@ def validate(path: str | Path) -> list[str]:
         )
     if not exp.baseline.name.strip():
         problems.append("baseline.name is empty — name the specific thing you must beat")
+    if exp.baseline.direction_is_ambiguous():
+        problems.append(
+            f"baseline.metric is {exp.baseline.metric!r} with no "
+            "baseline.higher_is_better — a metric you minimise is fine here, but "
+            "it has to be declared, because every gate otherwise assumes higher "
+            "is better and would pass a model that scored WORSE than the "
+            "baseline. Write higher_is_better: false and the comparison inverts; "
+            "write true if the name is misleading and this really does go up. "
+            "This check reads the metric's name, not the metric, so it cannot "
+            "tell which you meant — the line is what tells it."
+        )
     if not exp.kill_criteria:
         problems.append(
             "kill_criteria is empty — name at least one condition that would make you "

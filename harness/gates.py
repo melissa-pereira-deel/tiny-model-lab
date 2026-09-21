@@ -44,15 +44,43 @@ class GateResult:
 
 
 def baseline_gate(
-    experiment: Experiment, candidate_value: float, higher_is_better: bool = True
+    experiment: Experiment, candidate_value: float, higher_is_better: bool | None = None
 ) -> GateResult:
     """Did the model beat the thing that already works?
 
     Strict inequality on purpose. A tie means the simpler thing wins, because
     the simpler thing has no training pipeline, no weights to ship, and no
     silent failure modes.
+
+    `higher_is_better` resolves in three steps: an explicit argument, then
+    `baseline.higher_is_better` from the contract, then True. The contract is
+    the one that matters -- it is why `python -m harness gate` compares the
+    right way round without a flag, and why a manifest can still be re-gated
+    correctly a year later. The argument stays for callers who want to
+    override a signed contract in a single call, which is a thing to do in a
+    test rather than in a runner.
     """
     b = experiment.baseline
+    if higher_is_better is None and b.direction_is_ambiguous():
+        return GateResult(
+            name="baseline",
+            passed=False,
+            detail=(
+                f"metric '{b.metric}' reads as something to minimise, and "
+                "baseline.higher_is_better is not set"
+            ),
+            remediation=(
+                "Every gate would assume higher is better, so a model with a "
+                "WORSE score than the baseline would pass and be promoted -- "
+                "silently, with the gate printing PASS. Set "
+                "baseline.higher_is_better: false in the experiment file and "
+                "the comparison inverts. If the name is misleading and higher "
+                "really is better here, set it to true and this stops asking. "
+                "The check reads the metric's name, not the metric, so it "
+                "cannot tell which you meant -- that is what the line is for."
+            ),
+        )
+    higher_is_better = b.prefers_higher() if higher_is_better is None else higher_is_better
     if b.measured_at_runtime and b.value == 0.0:
         return GateResult(
             name="baseline",
@@ -67,8 +95,10 @@ def baseline_gate(
                 "prevent. Measure the baseline on the held-out split and assign it "
                 "to experiment.baseline.value before start_run(), the way "
                 "examples/01-hello-tiny/run.py does. If the measurement genuinely is "
-                "0.0, state the metric in the direction where it is not -- accuracy "
-                "1.0, not error 0.0 -- so the gate has something to compare."
+                "0.0, either declare baseline.higher_is_better: false and keep the "
+                "metric you have, or state it in the direction where zero is not the "
+                "answer -- accuracy 1.0 rather than error 0.0 -- so the gate has "
+                "something to compare."
             ),
         )
     beat = candidate_value > b.value if higher_is_better else candidate_value < b.value
@@ -144,13 +174,19 @@ def latency_gate(experiment: Experiment, p95_ms: float) -> GateResult:
 
 
 def patience_gate(experiment: Experiment, eval_history: Sequence[float],
-                  higher_is_better: bool = True) -> GateResult:
+                  higher_is_better: bool | None = None) -> GateResult:
     """Stop when N consecutive evals fail to strictly improve on the best so far.
 
     This is the gate that prevents the most common and most expensive failure
     mode of agent-run ML: a plausible-looking loop that burns a night of compute
     going nowhere.
+
+    Direction resolves the same way as in `baseline_gate`. It matters as much
+    here: with the direction wrong, a rising loss reads as improvement, so the
+    one gate meant to stop a run going nowhere never fires.
     """
+    if higher_is_better is None:
+        higher_is_better = experiment.baseline.prefers_higher()
     patience = experiment.budgets.patience_evals
     if len(eval_history) <= patience:
         return GateResult(
@@ -204,18 +240,23 @@ def run_all(
     p95_ms: float,
     eval_history: Sequence[float],
     elapsed_minutes: float,
-    higher_is_better: bool = True,
+    higher_is_better: bool | None = None,
 ) -> tuple[bool, list[GateResult]]:
     """Run every gate. Returns (all_passed, results).
 
     Order matters for reading, not for logic: baseline first because it is the
     one that most often should stop the work entirely.
+
+    `higher_is_better=None` passes the question down rather than answering it,
+    so both direction-sensitive gates read the contract. That is what lets
+    `gate_run` -- and therefore `python -m harness gate` -- get the direction
+    right without a flag.
     """
     results = [
-        baseline_gate(experiment, candidate_value, higher_is_better),
+        baseline_gate(experiment, candidate_value, higher_is_better=higher_is_better),
         size_gate(experiment, size_kb),
         latency_gate(experiment, p95_ms),
-        patience_gate(experiment, eval_history, higher_is_better),
+        patience_gate(experiment, eval_history, higher_is_better=higher_is_better),
         wallclock_gate(experiment, elapsed_minutes),
     ]
     return all(r.passed for r in results), results
