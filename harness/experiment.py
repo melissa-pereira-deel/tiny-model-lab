@@ -58,6 +58,45 @@ LATENCY_BANDS_MS = {
 }
 
 
+# Fragments that mean "lower is better", however the metric is spelled.
+# Deliberately short and openly incomplete, in the same spirit as
+# RANDOM_SPLIT_NAMES in validate.py: this reads a name, not a metric, so it can
+# never catch every loss and it can be fooled by anyone determined. Its job is
+# to make the honest answer cost one line instead of costing a silent promotion
+# of the worse model.
+#
+# Substrings rather than whole words, so `val_loss`, `word error rate` and
+# `test_rmse` are all caught.
+LOSS_SHAPED_METRICS = frozenset(
+    {
+        "loss",
+        "error",
+        "perplexity",
+        "ppl",
+        "wer",
+        "cer",
+        "rmse",
+        "mse",
+        "mae",
+        "nll",
+        "entropy",
+        "distance",
+        "latency",
+        "regret",
+    }
+)
+
+
+def reads_as_a_loss(metric: str) -> bool:
+    """Does this metric's *name* suggest lower is better?
+
+    Name only. Nothing here inspects a number, and `accuracy_loss_delta` would
+    fool it. See LOSS_SHAPED_METRICS.
+    """
+    normalised = metric.strip().lower()
+    return any(fragment in normalised for fragment in LOSS_SHAPED_METRICS)
+
+
 @dataclass
 class Budgets:
     """Hard limits. Exceeding any one of these fails the run."""
@@ -97,6 +136,18 @@ class Baseline:
     # run whose number never arrived, so the flag cannot manufacture a zero
     # baseline that everything beats.
     measured_at_runtime: bool = False
+    # Which way the metric runs. `None` means nobody said, and every gate then
+    # assumes higher is better, which is what they have always assumed.
+    #
+    # Declaring it is only mandatory when the metric's name reads like a loss
+    # -- see `direction_is_ambiguous`. That is the same device as
+    # `measured_at_runtime`: the cost of the honest answer is one line, and
+    # the gate refuses the case where the answer is missing and matters.
+    #
+    # It lives in the contract rather than in a call argument because a
+    # manifest has to be re-gateable later, and an argument is not written
+    # down anywhere.
+    higher_is_better: bool | None = None
 
     VALID_KINDS = ("deterministic", "classical", "existing_tool", "previous_run")
 
@@ -105,6 +156,24 @@ class Baseline:
             raise ValueError(
                 f"baseline.kind must be one of {self.VALID_KINDS}, got {self.kind!r}"
             )
+
+    def prefers_higher(self) -> bool:
+        """Resolve the direction. Undeclared is higher, as it always has been."""
+        return True if self.higher_is_better is None else self.higher_is_better
+
+    def direction_is_ambiguous(self) -> bool:
+        """Undeclared, on a metric whose *name* reads like something to minimise.
+
+        The two halves both matter. Undeclared alone is fine -- `accuracy` has
+        meant higher-is-better since the first commit and nobody should have to
+        restate it. A loss-shaped name alone is fine too: say
+        `higher_is_better: false` and the gates obey you.
+
+        It is the combination that is almost always an accident, and it is the
+        expensive kind: the gate passes a model that is worse than the
+        baseline, prints PASS, and promotes it.
+        """
+        return self.higher_is_better is None and reads_as_a_loss(self.metric)
 
 
 @dataclass

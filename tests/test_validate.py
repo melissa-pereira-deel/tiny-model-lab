@@ -206,3 +206,51 @@ class TestDatasetSplit:
 @pytest.mark.parametrize("kind", ["deterministic", "classical", "existing_tool", "previous_run"])
 def test_every_valid_baseline_kind_passes(tmp_path: Path, kind: str) -> None:
     assert validate(write_experiment(tmp_path, baseline__kind=kind)) == []
+
+
+class TestMetricDirection:
+    """#23. The direction was a call argument no CLI path ever passed.
+
+    Now it is in the contract, and the validator refuses the one combination
+    that is almost always an accident: a metric named like a loss with nobody
+    having said which way it runs.
+    """
+
+    @pytest.mark.parametrize(
+        "metric", ["perplexity", "val_loss", "error rate", "WER", "test_rmse"]
+    )
+    def test_an_undeclared_loss_is_rejected(self, tmp_path: Path, metric: str) -> None:
+        problems = validate(write_experiment(tmp_path, baseline__metric=metric))
+        assert any("higher_is_better" in p for p in problems)
+
+    def test_declaring_it_is_the_escape(self, tmp_path: Path) -> None:
+        """A declaration, not an exemption — the same device as
+        `measured_at_runtime` and `split_rationale`. Some metrics really are
+        losses, and the price of saying so is one line."""
+        spec = write_experiment(
+            tmp_path, baseline__metric="perplexity", baseline__higher_is_better=False
+        )
+        assert validate(spec) == []
+
+    def test_declaring_true_also_counts(self, tmp_path: Path) -> None:
+        """The check makes the question unavoidable; it does not pick the answer."""
+        spec = write_experiment(
+            tmp_path, baseline__metric="perplexity", baseline__higher_is_better=True
+        )
+        assert validate(spec) == []
+
+    def test_an_ordinary_metric_needs_no_declaration(self, tmp_path: Path) -> None:
+        assert validate(write_experiment(tmp_path, baseline__metric="accuracy")) == []
+
+    def test_message_names_the_escape(self, tmp_path: Path) -> None:
+        """The message's job is to teach the way out, so a reword must not drop it."""
+        problems = validate(write_experiment(tmp_path, baseline__metric="perplexity"))
+        assert any("higher_is_better: false" in p for p in problems)
+
+    def test_the_check_admits_it_reads_a_name(self, tmp_path: Path) -> None:
+        """`accuracy_of_loss_model` passes and a real loss called `score` does not
+        get caught. The message says it reads the name rather than implying the
+        metric itself was inspected — same posture as the split check."""
+        assert validate(write_experiment(tmp_path, baseline__metric="score")) == []
+        problems = validate(write_experiment(tmp_path, baseline__metric="perplexity"))
+        assert any("reads the metric's name" in p for p in problems)

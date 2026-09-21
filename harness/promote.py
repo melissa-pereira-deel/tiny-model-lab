@@ -38,13 +38,19 @@ def _load_champion(champion_dir: Path | None = None) -> dict | None:
 
 
 def evaluate_promotion(
-    run_dir: Path, *, higher_is_better: bool = True, champion_dir: Path | None = None
+    run_dir: Path, *, higher_is_better: bool | None = None, champion_dir: Path | None = None
 ) -> tuple[bool, str]:
     """Decide whether a finished run should become the champion.
 
     Two conditions, both required:
       1. every gate passes (baseline, size, latency, patience, wallclock)
       2. it strictly improves on the current champion's held-out metric
+
+    `higher_is_better=None` reads the direction off the run's own contract,
+    which is what `python -m harness ship` relies on. Getting this wrong is
+    worse here than in a single gate: each promotion would install an
+    incumbent worse than the last, and the ledger would record every one of
+    them as an improvement.
     """
     manifest, exp = load_run(run_dir)
 
@@ -80,7 +86,12 @@ def evaluate_promotion(
                 "and a run cannot strictly improve on itself."
             )
         prev = champ["metric_value"]
-        better = final["metric_value"] > prev if higher_is_better else final["metric_value"] < prev
+        # Resolved here rather than at the top because the gates above take
+        # None deliberately -- it is how they consult the contract.
+        prefers_higher = (
+            exp.baseline.prefers_higher() if higher_is_better is None else higher_is_better
+        )
+        better = final["metric_value"] > prev if prefers_higher else final["metric_value"] < prev
         if not better:
             return False, (
                 f"gates passed but champion not beaten "
@@ -94,7 +105,7 @@ def promote(
     run_dir: Path,
     artifact: Path,
     *,
-    higher_is_better: bool = True,
+    higher_is_better: bool | None = None,
     champion_dir: Path | None = None,
     ledger: Path | None = None,
 ) -> str:

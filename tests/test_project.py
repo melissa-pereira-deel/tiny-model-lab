@@ -158,3 +158,72 @@ class TestPackaging:
         except metadata.PackageNotFoundError:
             pytest.skip("package not installed, so there is no metadata to compare")
         assert installed == harness.__version__
+
+
+class TestPromotionDirection:
+    """#23's most expensive half: the champion comparison running backwards.
+
+    A single gate comparing the wrong way loses one run. `evaluate_promotion`
+    comparing the wrong way installs a worse incumbent every time, and the
+    ledger records each one as an improvement.
+    """
+
+    def losing_run(self, runs_dir: Path, **baseline) -> Path:
+        """Perplexity 2.40 against a baseline of 2.10 — genuinely worse."""
+        exp = Experiment.from_yaml(EXAMPLE_SPEC)
+        exp.baseline.metric = "perplexity"
+        exp.baseline.value = 2.10
+        exp.budgets.max_size_kb = 1000
+        for key, value in baseline.items():
+            setattr(exp.baseline, key, value)
+        run_dir = start_run(exp, runs_dir=runs_dir)
+        record_eval(
+            run_dir, variant="v1", metric_value=2.40,
+            size_kb=3.0, p95_ms=2.0, elapsed_minutes=0.2,
+        )
+        return run_dir
+
+    def test_a_worse_loss_is_refused_when_the_contract_says_so(
+        self, tmp_path: Path
+    ) -> None:
+        """The bug, from the other end. 2.40 is worse perplexity than 2.10, and
+        before the contract carried a direction this promoted."""
+        run_dir = self.losing_run(tmp_path / "runs", higher_is_better=False)
+        ok, message = evaluate_promotion(run_dir, champion_dir=tmp_path / "champion")
+        assert not ok
+        assert "gates failed" in message
+
+    def test_an_undeclared_loss_is_refused_before_it_can_promote(
+        self, tmp_path: Path
+    ) -> None:
+        run_dir = self.losing_run(tmp_path / "runs")
+        ok, message = evaluate_promotion(run_dir, champion_dir=tmp_path / "champion")
+        assert not ok
+        assert "higher_is_better" in message
+
+    def test_the_champion_comparison_reads_the_contract(self, tmp_path: Path) -> None:
+        """With an incumbent at 2.00, a run at 2.40 must lose on a loss metric.
+
+        This is the comparison that is not a gate, so it needs its own cover:
+        `evaluate_promotion` resolves direction separately from `run_all`.
+        """
+        champion = tmp_path / "champion"
+        champion.mkdir()
+        (champion / "champion.json").write_text(
+            json.dumps({"run_id": "earlier", "metric_value": 2.00, "metric": "perplexity"})
+        )
+        # This run beats its own baseline (2.40 < 2.10 is false, so widen it)
+        exp = Experiment.from_yaml(EXAMPLE_SPEC)
+        exp.baseline.metric = "perplexity"
+        exp.baseline.value = 3.00
+        exp.baseline.higher_is_better = False
+        exp.budgets.max_size_kb = 1000
+        run_dir = start_run(exp, runs_dir=tmp_path / "runs")
+        record_eval(
+            run_dir, variant="v1", metric_value=2.40,
+            size_kb=3.0, p95_ms=2.0, elapsed_minutes=0.2,
+        )
+
+        ok, message = evaluate_promotion(run_dir, champion_dir=champion)
+        assert not ok, message
+        assert "champion not beaten" in message

@@ -29,7 +29,7 @@ you can prove it beat the four lines of code it replaced.
 
 > **⚠️ Status: early, and measured about it.**
 >
-> The harness, the gates, the CLI and both worked examples run today, with 316
+> The harness, the gates, the CLI and both worked examples run today, with 352
 > tests and CI on Python 3.10 and 3.14 across Ubuntu and Windows. The six
 > commands, five subagents and six skills are written and usable; they have not
 > been evaluated at scale.
@@ -96,7 +96,11 @@ without a training pipeline, and without silent failure modes. Equal accuracy is
 not equal value.
 
 That rule is a strict `>` in `harness/gates.py`, and everything else in this
-repo exists to enforce it.
+repo exists to enforce it. If your metric runs the other way — a loss, a word
+error rate — say so with `baseline.higher_is_better: false` and the comparison
+inverts. The gate refuses to guess: a metric whose name reads like something
+you minimise, with nobody having said which way it goes, fails rather than
+quietly comparing backwards.
 
 ```
 /spike       (no subagent)  →  one cheap measurement, so a field carries a real number
@@ -296,7 +300,7 @@ harness/       the contract, the spike, the gates, profiling, promotion, CLI —
 docs/          concepts, harness design, stop conditions, do's and don'ts,
                how to prompt the agent
 examples/      01 dependency-free in a second; 02 trains, exports, quantizes
-tests/         316 of them, including the hooks and the gate arithmetic
+tests/         352 of them, including the hooks and the gate arithmetic
 CHANGELOG.md   what changed, with gate semantics as its own category — a
                stricter gate invalidates a run that already passed
 ```
