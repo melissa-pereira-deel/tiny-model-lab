@@ -1,0 +1,32 @@
+# Written by `python -m harness init`. Covers what the harness itself writes,
+# and nothing else — you almost certainly want to add your language's rules
+# (__pycache__/, node_modules/, .venv/) on top. A file that tried to be a
+# complete .gitignore for every project would be incomplete for all of them.
+#
+# The one rule underneath all of this: provenance is committed, bytes are not.
+# A manifest says what was tried and what won, and it is small. The artifact it
+# describes is not, and `promote()` copies your model into champion/, so the
+# same bytes land in two places on every promotion. A run history of any length
+# then becomes a repository nobody can clone — and by the time that is
+# noticeable, the bytes are in the history and hard to get out.
+
+runs/*/artifacts/
+runs/*/checkpoints/
+champion/*.onnx
+champion/*.mlpackage/
+champion/*.tflite
+champion/*.safetensors
+data/
+corpora/
+*.pt
+*.pth
+*.ckpt
+*.gguf
+
+# These ARE tracked. They are the decision trail: what ran, what it scored,
+# and what became the champion. Nothing above matches them — the negations are
+# here to say so, not because they are load-bearing. Do not "tidy" this by
+# ignoring runs/ or champion/ wholesale.
+!runs/*/manifest.json
+!runs/LEDGER.md
+!champion/champion.json

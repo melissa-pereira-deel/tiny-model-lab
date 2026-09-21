@@ -29,7 +29,7 @@ from pathlib import Path
 
 from .experiment import LATENCY_BANDS_MS, project_root
 from .gates import gate_run
-from .init import scaffold
+from .init import SPEC_TEMPLATE, scaffold
 from .promote import promote
 from .spike import find_spikes, load_spike, spike_problems
 from .validate import validate
@@ -80,7 +80,12 @@ def cmd_init(argv: list[str]) -> int:
     for line in scaffold(root):
         print(line)
     print(f"\nproject root is now {project_root()}")
-    print("next: fill in the spec it wrote, then `python -m harness validate` it")
+    print(
+        f"next: copy experiments/{SPEC_TEMPLATE} to experiments/<task>.yaml, fill it\n"
+        "      in, then `python -m harness validate` it. The blank form is "
+        "deliberately\n      invalid, so the first thing validate tells you is what is "
+        "missing."
+    )
     return 0
 
 
