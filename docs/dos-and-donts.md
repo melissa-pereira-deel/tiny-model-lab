@@ -123,6 +123,13 @@ actually feel; cold start is a different UX problem with different fixes
 in `harness/profile.py` sums a directory tree so that a `.mlpackage` or a split
 ONNX model reports what it really costs. Users download bytes.
 
+This one is now enforced rather than advised. `promote()` stats the artifact you
+hand it and re-runs the size gate on that number, so an estimate in the manifest
+does not survive contact with `ship` (#24). The champion card records both: the
+measured size, and what the run claimed. `python -m harness gate` still cannot
+check it — mid-run there is no export to check against — which is why it says so
+in its own output.
+
 **Don't treat the latency bands as tunable.** `LATENCY_BANDS_MS` in
 `harness/experiment.py` carries a comment explaining why it lives in code rather
 than config: 100 ms / 1 s / 10 s are perceptual facts about humans, not

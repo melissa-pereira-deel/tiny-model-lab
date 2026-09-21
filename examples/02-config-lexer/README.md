@@ -16,9 +16,14 @@ artifact measured in bytes on disk, the conversion verified numerically, int8
 quantization applied and measured, and a model card written at the end.
 
 The export happens *inside* the eval loop rather than after promotion, because
-`size_gate` measures the exported artifact and not a parameter count. So the
+the size budget is about the exported artifact and not a parameter count. So the
 export path is exercised whichever way the baseline gate goes — which matters
 here, because the baseline won.
+
+`size_gate` itself takes a bare float and compares it to the budget; it never
+sees a file. What measures one is `artifact_size_kb`, called here on each export
+and again by `promote()` on whatever artifact you hand it. Mid-run the number is
+the runner's; at ship time it is the disk's.
 
 ## The result, which is not the one the hypothesis predicted
 

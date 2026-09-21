@@ -31,4 +31,6 @@ Training tiny models on MPS is fine. Serving from MPS is not — do not plan pro
 
 After every eval, call `harness.experiment.record_eval` with `metric_value`, `size_kb`, `p95_ms`, `elapsed_minutes`. Then run the gates. When a gate fails, read its remediation and follow it rather than improvising — the remediation exists because the improvisation was already tried.
 
+`size_kb` comes from `harness.profile.artifact_size_kb` on the file you exported, never from a parameter count or an estimate. `promote()` stats the artifact and re-runs the size gate on the real bytes, so a number you guessed will be contradicted at ship time rather than believed (#24). If there is no export yet, there is no size to report — export first.
+
 Return a summary, not a log. The parent conversation needs the verdict and the numbers, not the epochs.

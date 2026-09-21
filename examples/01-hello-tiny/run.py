@@ -14,6 +14,7 @@ correct move is to ship the baseline.
 
 from __future__ import annotations
 
+import json
 import random
 import sys
 from pathlib import Path
@@ -23,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from harness.__main__ import use_utf8_stdout
 from harness.experiment import Experiment, finish_run, record_eval, start_run
 from harness.gates import run_all
-from harness.profile import latency_ms, summarize, tradeoff_row
+from harness.profile import artifact_size_kb, latency_ms, summarize, tradeoff_row
 
 # This prints em dashes, and Python otherwise inherits the locale encoding —
 # which raises UnicodeEncodeError under cp932, koi8-r or ascii. See #11.
@@ -100,10 +101,17 @@ class ToyModel:
     def predict(self, s: str) -> str:
         return self.table.get(s[0] if s else "", "word")
 
-    @property
-    def size_kb(self) -> float:
-        # Rough on-disk estimate: one char key plus a small label index.
-        return len(self.table) * 2 / 1024.0
+    def save(self, path: Path) -> Path:
+        """Write the thing that would actually ship, so it can be measured.
+
+        This used to be a `size_kb` property returning `len(self.table) * 2 /
+        1024` — an estimate of a file that did not exist. It was honest about
+        being rough and still wrong in the way that matters: the number the
+        size gate saw had never touched a disk, and this is the example people
+        copy. Export first, then measure what you exported (#24).
+        """
+        path.write_text(json.dumps(self.table, sort_keys=True))
+        return path
 
 
 def accuracy(fn, rows) -> float:
@@ -134,20 +142,26 @@ def main() -> int:
         timing = latency_ms(lambda m=model: m.predict("hello"), warmup=5, iterations=200)
         history.append(acc)
 
+        # Export, then measure the export. `start_run` made artifacts/ already,
+        # and it is gitignored, so the bytes stay out of the decision trail
+        # while the number describing them goes into it.
+        artifact = model.save(run_dir / "artifacts" / f"lookup-{n}.json")
+        size_kb = artifact_size_kb(artifact)
+
         record_eval(
             run_dir,
             variant=f"lookup-{n}",
             metric_value=acc,
-            size_kb=model.size_kb,
+            size_kb=size_kb,
             p95_ms=timing["p95_ms"],
             elapsed_minutes=0.01,
         )
-        rows.append(tradeoff_row(f"lookup-{n}", acc, model.size_kb, timing["p95_ms"]))
+        rows.append(tradeoff_row(f"lookup-{n}", acc, size_kb, timing["p95_ms"]))
 
         passed, results = run_all(
             exp,
             candidate_value=acc,
-            size_kb=model.size_kb,
+            size_kb=size_kb,
             p95_ms=timing["p95_ms"],
             eval_history=history,
             elapsed_minutes=0.01,

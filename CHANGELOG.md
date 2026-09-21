@@ -34,6 +34,36 @@ remediation is a `Changed`.
   examples, the template and every local manifest use `accuracy`, which is
   unaffected. The runs it would have caught are ones nobody here has written.
 
+- `promote()` measures the artifact and runs the size gate on **the bytes it is
+  about to copy**, instead of on `size_kb` from the manifest. It also refuses an
+  artifact measuring 0.0 KB, and one it cannot read. Previously nothing between
+  the runner writing that number and the gate reading it ever looked at a file:
+  `record_eval` validates nothing, `load_run` checks the key is present rather
+  than true, and `cmd_ship` checked only `artifact.exists()`. So a run could
+  gate on a self-reported 1 KB, print `PASS`, and promote a 4 MB file, with the
+  champion card recording 1 KB. Strictly stricter, and #24.
+
+  **This one does invalidate something in-tree.**
+  `examples/02-config-lexer/run.py` gates the int8 eval (4985 bytes) and then
+  hands `promote()` the fp32 `best_path` (8641 bytes) — the card would have
+  reported the first file's number for the second file's bytes. It is latent
+  there only because the baseline wins and promotion never runs, but it is the
+  defect, in the one example that measures everything else correctly.
+
+  No tolerance was added, deliberately. Refusing when the claimed and measured
+  numbers merely *disagree* needs a threshold nobody has measured, and an
+  unmeasured constant is what spike records exist to prevent. The budget is the
+  only number here anyone argued for, so the budget is the only thing that
+  refuses: 4 MB fails because it is over 50 KB, not because the manifest said
+  something else. A discrepancy that still fits the budget promotes, with both
+  numbers on the report and in the card.
+
+  `python -m harness gate` is unchanged and still cannot check this. It takes a
+  run directory and no artifact, on purpose — it runs every loop during
+  training, when the export usually does not exist. Ship is the first moment
+  the bytes are real. The gate now says so in its own output rather than
+  printing `artifact 1.0 KB` about a file it never opened.
+
 ### Added
 
 - The spike — `harness/spike.py` and `harness/templates/spike.md`. A spike is
@@ -131,6 +161,28 @@ remediation is a `Changed`.
   `patience_gate`, `run_all`, `evaluate_promotion` and `promote` keep their
   `higher_is_better` parameter as an override; it now defaults to `None`,
   meaning *ask the contract*.
+- The champion card gains `size_kb_reported` beside `size_kb`. `size_kb` is now
+  the measured number and describes the bytes in `champion/`; `size_kb_reported`
+  is what the run claimed. Both are written every time rather than only on a
+  mismatch — a field that appears conditionally is one a reader can conclude
+  nothing from when it is absent, and the pair is the evidence the check ran.
+  The ledger line already formatted `card['size_kb']`, so it became true
+  without an edit.
+
+  `evaluate_promotion` gains a keyword-only `artifact: Path | None = None`.
+  `None` answers from the manifest alone, which is how you ask "would this
+  promote?" before an export exists, and it is what keeps every existing caller
+  working. It is not a way around the check: `promote()` always passes the
+  artifact and `cmd_ship` always goes through `promote()`.
+
+- `examples/01-hello-tiny` writes its lookup table to `runs/<id>/artifacts/` and
+  measures it, instead of reporting `len(table) * 2 / 1024` for a file that did
+  not exist. The estimate was labelled as one and still wrong in the way that
+  matters — this is the example people copy, so it was the in-tree precedent
+  for "whatever the runner says". The reported size moves from 0.1 KB to 0.7 KB
+  against a 5 KB budget; the size gate still passes and the example's point,
+  that the baseline wins, is unchanged.
+
 - `baseline_gate`'s zero-baseline remediation, and its paraphrase in
   `docs/dos-and-donts.md`, now offer `higher_is_better: false` alongside the
   older advice to restate the metric in the direction where zero is not the
