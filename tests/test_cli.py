@@ -377,3 +377,63 @@ def test_module_entry_point_is_wired_up(tmp_path: Path) -> None:
     assert proc.returncode == 0, proc.stderr
     assert "ALL GATES PASS" in proc.stdout
     assert "RuntimeWarning" not in proc.stderr
+
+
+class TestShipMeasuresTheArtifact:
+    """#24 through the front door: `ship` gates the bytes, not the manifest.
+
+    `make_run` records `size_kb: 12.0` against a 1000 KB budget, and nothing
+    between the runner writing that number and the gate reading it ever looked
+    at a file. These go through `main(["ship", ...])` rather than `promote()`
+    because the CLI is the path an agent actually takes.
+    """
+
+    def test_an_oversized_artifact_is_refused(self, tmp_path: Path, capsys) -> None:
+        run_dir = make_run(tmp_path)
+        big = tmp_path / "big.onnx"
+        big.write_bytes(b"\0" * 2_000_000)  # 1953.1 KB against a 1000 KB budget
+
+        code = main(["ship", str(run_dir), str(big),
+                     "--champion-dir", str(tmp_path / "champ")])
+
+        out = capsys.readouterr().out
+        assert code == 1
+        assert "REFUSED" in out
+        assert "1953.1 KB vs budget 1000.0 KB" in out
+        assert not (tmp_path / "champ").exists()
+
+    def test_the_card_carries_both_numbers(self, tmp_path: Path) -> None:
+        run_dir = make_run(tmp_path)
+        artifact = tmp_path / "model.onnx"
+        artifact.write_bytes(b"\0" * 1_024)
+        champ = tmp_path / "champ"
+
+        main(["ship", str(run_dir), str(artifact), "--champion-dir", str(champ)])
+
+        card = json.loads((champ / "champion.json").read_text())
+        assert card["size_kb"] == 1.0           # what is in champion/
+        assert card["size_kb_reported"] == 12.0  # what the runner claimed
+
+    def test_the_provenance_line_is_printed(self, tmp_path: Path, capsys) -> None:
+        run_dir = make_run(tmp_path)
+        artifact = tmp_path / "model.onnx"
+        artifact.write_bytes(b"\0" * 1_024)
+
+        main(["ship", str(run_dir), str(artifact),
+              "--champion-dir", str(tmp_path / "champ")])
+
+        out = capsys.readouterr().out
+        assert "measured: artifact 1.0 KB on disk" in out
+        assert "the manifest recorded 12.0 KB" in out
+
+    def test_an_empty_export_is_refused(self, tmp_path: Path, capsys) -> None:
+        """`cmd_ship` only checks the path exists, and an empty file exists."""
+        run_dir = make_run(tmp_path)
+        empty = tmp_path / "model.onnx"
+        empty.write_bytes(b"")
+
+        code = main(["ship", str(run_dir), str(empty),
+                     "--champion-dir", str(tmp_path / "champ")])
+
+        assert code == 1
+        assert "export that failed" in capsys.readouterr().out

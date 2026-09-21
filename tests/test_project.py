@@ -227,3 +227,189 @@ class TestPromotionDirection:
         ok, message = evaluate_promotion(run_dir, champion_dir=champion)
         assert not ok, message
         assert "champion not beaten" in message
+
+
+class TestMeasuredSize:
+    """#24: the size gate compares the bytes being shipped, not the claim.
+
+    Its sibling, #23, was 'the gate compares the wrong way round'. This one is
+    'the gate compares against a number nobody checked'. Together they are the
+    two ways the promotion path can pass something it should not, and this is
+    the half where the harness can actually check the answer against the world
+    -- accuracy and p95 are gone once a run ends, and the artifact is not.
+    """
+
+    def run_claiming(self, runs_dir: Path, claimed_kb: float, budget_kb: float = 50) -> Path:
+        exp = Experiment.from_yaml(EXAMPLE_SPEC)
+        exp.baseline.value = 0.50
+        exp.budgets.max_size_kb = budget_kb
+        run_dir = start_run(exp, runs_dir=runs_dir)
+        record_eval(
+            run_dir, variant="v1", metric_value=0.99,
+            size_kb=claimed_kb, p95_ms=1.0, elapsed_minutes=0.1,
+        )
+        return run_dir
+
+    def test_the_issue_as_filed(self, tmp_path: Path) -> None:
+        """Gate on a self-reported 1 KB, ship 4 MB. This used to promote."""
+        run_dir = self.run_claiming(tmp_path / "runs", claimed_kb=1.0)
+        big = tmp_path / "big.bin"
+        big.write_bytes(b"\0" * 4_000_000)
+
+        result = promote(
+            run_dir, big, champion_dir=tmp_path / "c", ledger=tmp_path / "L.md"
+        )
+
+        assert result.startswith("REFUSED"), result
+        assert "3906.2 KB vs budget 50.0 KB" in result
+        assert not (tmp_path / "c").exists()
+
+    def test_the_refusal_is_the_ordinary_one(self, tmp_path: Path) -> None:
+        """An oversized artifact is over budget, not a special kind of lie.
+
+        Deliberate: the remediation for 4 MB against a 50 KB budget really is
+        'quantize, then prune'. Inventing a second failure mode for it would
+        have meant inventing a tolerance to separate the two.
+        """
+        run_dir = self.run_claiming(tmp_path / "runs", claimed_kb=1.0)
+        big = tmp_path / "big.bin"
+        big.write_bytes(b"\0" * 4_000_000)
+
+        result = promote(
+            run_dir, big, champion_dir=tmp_path / "c", ledger=tmp_path / "L.md"
+        )
+        assert "post-training quantization" in result
+
+    def test_a_discrepancy_inside_the_budget_still_promotes(self, tmp_path: Path) -> None:
+        """40 KB claimed as 1 KB, against a 50 KB budget.
+
+        The bytes fit the budget and the budget is what the contract is about.
+        Refusing this would need a threshold on the gap between the two
+        numbers, and nobody has measured one.
+        """
+        run_dir = self.run_claiming(tmp_path / "runs", claimed_kb=1.0)
+        artifact = tmp_path / "model.onnx"
+        artifact.write_bytes(b"\0" * 40_960)
+
+        champion = tmp_path / "c"
+        result = promote(run_dir, artifact, champion_dir=champion, ledger=tmp_path / "L.md")
+
+        assert result.startswith("PROMOTED"), result
+        card = json.loads((champion / "champion.json").read_text())
+        assert card["size_kb"] == 40.0
+        assert card["size_kb_reported"] == 1.0
+
+    def test_the_ledger_records_the_measured_number(self, tmp_path: Path) -> None:
+        run_dir = self.run_claiming(tmp_path / "runs", claimed_kb=1.0)
+        artifact = tmp_path / "model.onnx"
+        artifact.write_bytes(b"\0" * 40_960)
+        ledger = tmp_path / "L.md"
+
+        promote(run_dir, artifact, champion_dir=tmp_path / "c", ledger=ledger)
+
+        assert "40.0 KB" in ledger.read_text()
+        assert "1.0 KB" not in ledger.read_text()
+
+    def test_both_numbers_are_in_the_report(self, tmp_path: Path) -> None:
+        """Printed on a pass too. A line that only appears on a mismatch is one
+        a reader can conclude nothing from when it is absent."""
+        run_dir = self.run_claiming(tmp_path / "runs", claimed_kb=1.0)
+        artifact = tmp_path / "model.onnx"
+        artifact.write_bytes(b"\0" * 40_960)
+
+        ok, message = evaluate_promotion(
+            run_dir, artifact=artifact, champion_dir=tmp_path / "c"
+        )
+        assert ok, message
+        assert "artifact 40.0 KB on disk" in message
+        assert "the manifest recorded 1.0 KB" in message
+
+    def test_a_directory_artifact_sums_the_tree(self, tmp_path: Path) -> None:
+        """A .mlpackage or a split ONNX model is a directory, and what the user
+        downloads is all of it."""
+        run_dir = self.run_claiming(tmp_path / "runs", claimed_kb=1.0)
+        bundle = tmp_path / "model.mlpackage"
+        (bundle / "weights").mkdir(parents=True)
+        (bundle / "weights" / "w.bin").write_bytes(b"\0" * 20_480)
+        (bundle / "meta.json").write_bytes(b"\0" * 1_024)
+
+        champion = tmp_path / "c"
+        result = promote(run_dir, bundle, champion_dir=champion, ledger=tmp_path / "L.md")
+
+        assert result.startswith("PROMOTED"), result
+        card = json.loads((champion / "champion.json").read_text())
+        assert card["size_kb"] == 21.0
+
+    def test_an_empty_file_is_refused(self, tmp_path: Path) -> None:
+        """Zero clears every budget, because zero is under every number."""
+        run_dir = self.run_claiming(tmp_path / "runs", claimed_kb=1.0)
+        empty = tmp_path / "model.onnx"
+        empty.write_bytes(b"")
+
+        result = promote(
+            run_dir, empty, champion_dir=tmp_path / "c", ledger=tmp_path / "L.md"
+        )
+
+        assert result.startswith("REFUSED"), result
+        assert "0.0 KB" in result
+        assert "export that failed" in result
+        assert not (tmp_path / "c").exists()
+
+    def test_an_empty_directory_is_refused_the_same_way(self, tmp_path: Path) -> None:
+        run_dir = self.run_claiming(tmp_path / "runs", claimed_kb=1.0)
+        bundle = tmp_path / "model.mlpackage"
+        bundle.mkdir()
+
+        result = promote(
+            run_dir, bundle, champion_dir=tmp_path / "c", ledger=tmp_path / "L.md"
+        )
+        assert result.startswith("REFUSED"), result
+        assert "export that failed" in result
+
+    def test_a_missing_artifact_refuses_rather_than_raising(self, tmp_path: Path) -> None:
+        """`promote` promises a refusal string. A path that vanished between
+        the gate and the ship is a refusal like any other, not a traceback."""
+        run_dir = self.run_claiming(tmp_path / "runs", claimed_kb=1.0)
+        gone = tmp_path / "never-existed.onnx"
+
+        result = promote(
+            run_dir, gone, champion_dir=tmp_path / "c", ledger=tmp_path / "L.md"
+        )
+
+        assert result.startswith("REFUSED"), result
+        assert "cannot measure the artifact" in result
+
+    def test_without_an_artifact_nothing_changes(self, tmp_path: Path) -> None:
+        """The backwards-compatibility pin.
+
+        `artifact=None` is what lets you ask 'would this promote?' before the
+        export exists, which is the only question the gate subcommand can
+        answer. It has to behave exactly as it did before #24.
+        """
+        run_dir = self.run_claiming(tmp_path / "runs", claimed_kb=1.0)
+
+        ok, message = evaluate_promotion(run_dir, champion_dir=tmp_path / "c")
+
+        assert ok, message
+        assert "gated on the manifest's 1.0 KB" in message
+        assert "nothing has checked against a file" in message
+
+    def test_the_example_02_skew(self, tmp_path: Path) -> None:
+        """The in-tree case, as a unit.
+
+        examples/02-config-lexer gates the int8 eval (4985 bytes) and then
+        passes `best_path`, the fp32 file (8641 bytes), to promote(). The card
+        used to report the eval's number for the other file's bytes. It is
+        latent there only because the baseline wins -- but it is the defect in
+        the one example that measures everything else correctly.
+        """
+        run_dir = self.run_claiming(tmp_path / "runs", claimed_kb=4985 / 1024)
+        shipped = tmp_path / "conv-raw-chars.onnx"
+        shipped.write_bytes(b"\0" * 8641)
+
+        champion = tmp_path / "c"
+        promote(run_dir, shipped, champion_dir=champion, ledger=tmp_path / "L.md")
+
+        card = json.loads((champion / "champion.json").read_text())
+        assert card["size_kb"] == 8641 / 1024
+        assert card["size_kb_reported"] == 4985 / 1024

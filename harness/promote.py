@@ -4,6 +4,11 @@ Modelled on gpu-lexer's rule — promote only a run that *strictly* improves
 untouched verification accuracy and passes the guards. Everything else stays a
 run. This is what keeps `runs/` full of honest history instead of a graveyard of
 things that were briefly called best.
+
+It is also the only place in the harness that can check a number against the
+world rather than against another number. Accuracy and p95 are gone by the time
+a run is over; the artifact is still there. So the size gate is measured here,
+on the bytes about to be copied, and not taken from the manifest (#24).
 """
 
 from __future__ import annotations
@@ -15,6 +20,7 @@ from pathlib import Path
 
 from .experiment import eval_history, load_run, project_root
 from .gates import run_all
+from .profile import artifact_size_kb
 
 
 def champion_dir_for(champion_dir: Path | None = None) -> Path:
@@ -37,20 +43,72 @@ def _load_champion(champion_dir: Path | None = None) -> dict | None:
     return json.loads(card.read_text()) if card.exists() else None
 
 
+def gated_size_kb(artifact: Path | None, reported_kb: float) -> float:
+    """The number the size gate should see.
+
+    The artifact's bytes when there is an artifact, the manifest's claim when
+    there is not. One owner on purpose: `evaluate_promotion` decides on this
+    number and `promote` writes it into the champion card, and two callers each
+    stat-ing the file their own way is exactly how a card comes to disagree
+    with the gate that let it through.
+
+    Raises OSError for a path that is gone or unreadable. The caller turns that
+    into a refusal rather than a traceback.
+    """
+    return reported_kb if artifact is None else artifact_size_kb(artifact)
+
+
+def size_provenance(artifact: Path | None, size_kb: float, reported_kb: float) -> str:
+    """One line saying where the number the size gate just used came from.
+
+    Printed whether the gate passed or failed, and never a comparison. Two
+    facts side by side need no threshold to be worth reading; deciding that the
+    gap between them is *too large* would need one, and an unmeasured tolerance
+    is the thing spike records exist to prevent. The budget is the only number
+    here anyone argued for, so the budget is the only thing that refuses.
+
+    Both numbers print even when they agree. A line that appears only on a
+    mismatch is a line a reader can conclude nothing from when it is absent.
+    """
+    if artifact is None:
+        return (
+            f"measured: nothing — gated on the manifest's {reported_kb:.1f} KB, "
+            "which nothing has checked against a file"
+        )
+    return (
+        f"measured: artifact {size_kb:.1f} KB on disk; "
+        f"the manifest recorded {reported_kb:.1f} KB"
+    )
+
+
 def evaluate_promotion(
-    run_dir: Path, *, higher_is_better: bool | None = None, champion_dir: Path | None = None
+    run_dir: Path,
+    *,
+    artifact: Path | None = None,
+    higher_is_better: bool | None = None,
+    champion_dir: Path | None = None,
 ) -> tuple[bool, str]:
     """Decide whether a finished run should become the champion.
 
-    Two conditions, both required:
-      1. every gate passes (baseline, size, latency, patience, wallclock)
-      2. it strictly improves on the current champion's held-out metric
+    Three conditions, all required:
+      1. the artifact is measurable and has bytes in it
+      2. every gate passes (baseline, size, latency, patience, wallclock), with
+         the size gate reading the artifact rather than the manifest
+      3. it strictly improves on the current champion's held-out metric
+
+    `artifact=None` answers from the manifest alone. That is the same partial
+    answer the `gate` subcommand can give, and for the same reason: mid-run
+    there is usually no export yet, so there is nothing to measure. It is not a
+    way around the check — `promote()` always passes the artifact and
+    `cmd_ship` always goes through `promote()`, so nothing reaches `champion/`
+    unmeasured. What `None` buys is the ability to ask "would this promote?"
+    before the export exists.
 
     `higher_is_better=None` reads the direction off the run's own contract,
-    which is what `python -m harness ship` relies on. Getting this wrong is
-    worse here than in a single gate: each promotion would install an
-    incumbent worse than the last, and the ledger would record every one of
-    them as an improvement.
+    which is what the `ship` subcommand relies on. Getting this wrong is worse
+    here than in a single gate: each promotion would install an incumbent worse
+    than the last, and the ledger would record every one of them as an
+    improvement.
     """
     manifest, exp = load_run(run_dir)
 
@@ -61,16 +119,37 @@ def evaluate_promotion(
     final = evals[-1]
     history = eval_history(manifest)
 
+    reported_kb = final["size_kb"]
+    try:
+        size_kb = gated_size_kb(artifact, reported_kb)
+    except OSError as err:
+        return False, (
+            f"cannot measure the artifact at {artifact} — {err}. The size gate "
+            "compares the bytes you are about to ship, so an artifact it cannot "
+            "read is not a run it can judge."
+        )
+
+    if artifact is not None and size_kb == 0.0:
+        return False, (
+            f"the artifact at {artifact} measures 0.0 KB. An artifact with no "
+            "bytes is an export that failed, not a model that compressed well — "
+            "and it would clear any size budget, because zero is under every "
+            "number. Check the export step actually wrote something, then gate "
+            "the run again."
+        )
+
     passed, results = run_all(
         exp,
         candidate_value=final["metric_value"],
-        size_kb=final["size_kb"],
+        size_kb=size_kb,
         p95_ms=final["p95_ms"],
         eval_history=history,
         elapsed_minutes=final.get("elapsed_minutes", 0.0),
         higher_is_better=higher_is_better,
     )
-    report = "\n".join(str(r) for r in results)
+    report = "\n".join(
+        [size_provenance(artifact, size_kb, reported_kb), *(str(r) for r in results)]
+    )
     if not passed:
         return False, f"gates failed:\n{report}"
 
@@ -110,7 +189,10 @@ def promote(
     ledger: Path | None = None,
 ) -> str:
     ok, reason = evaluate_promotion(
-        run_dir, higher_is_better=higher_is_better, champion_dir=champion_dir
+        run_dir,
+        artifact=artifact,
+        higher_is_better=higher_is_better,
+        champion_dir=champion_dir,
     )
     if not ok:
         return f"REFUSED — {reason}"
@@ -136,7 +218,14 @@ def promote(
         "artifact": dest.name,
         "metric": manifest["experiment"]["baseline"]["metric"],
         "metric_value": final["metric_value"],
-        "size_kb": final["size_kb"],
+        # Measured, not claimed. A second stat() of a path `evaluate_promotion`
+        # has just read successfully, through the same one owner, so the card
+        # and the gate cannot end up describing different numbers.
+        "size_kb": gated_size_kb(artifact, final["size_kb"]),
+        # Kept beside it rather than discarded: a card where the two disagree is
+        # the only surviving evidence that a runner estimated where it should
+        # have measured. Always written, so its absence never has to be read.
+        "size_kb_reported": final["size_kb"],
         "p95_ms": final["p95_ms"],
         "beats_baseline": manifest["experiment"]["baseline"]["name"],
     }

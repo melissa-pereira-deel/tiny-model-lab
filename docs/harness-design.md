@@ -72,6 +72,16 @@ verification accuracy and passes the language guards.
 The effect is that `runs/` accumulates honest history instead of becoming a
 graveyard of things that were briefly called best.
 
+It is also the only place in the harness where a number can be checked against
+the world rather than against another number. Accuracy and p95 are gone once a
+run ends — nothing can recover them from a file — but the artifact is still
+there, so `promote()` stats it and re-runs the size gate on the bytes it is
+about to copy. Every other gate is arithmetic over what a runner reported. That
+asymmetry is why `python -m harness gate` says out loud that its numbers are
+self-reported: mid-run there is usually no export to check them against, and
+pretending otherwise was how a run could gate on a claimed 1 KB and promote a
+4 MB file.
+
 ## What this repo deliberately does not do
 
 It does not run autonomous architecture search or an open-ended experiment tree.

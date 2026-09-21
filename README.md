@@ -29,7 +29,7 @@ you can prove it beat the four lines of code it replaced.
 
 > **⚠️ Status: early, and measured about it.**
 >
-> The harness, the gates, the CLI and both worked examples run today, with 352
+> The harness, the gates, the CLI and both worked examples run today, with 367
 > tests and CI on Python 3.10 and 3.14 across Ubuntu and Windows. The six
 > commands, five subagents and six skills are written and usable; they have not
 > been evaluated at scale.
@@ -133,16 +133,16 @@ baseline 'rule classifier (isspace/isdigit/isalnum/else)': 1.0000 on held-out
 --- eval: n=4000 ---
 [FAIL] baseline: candidate accuracy=0.9200 vs deterministic baseline 'rule classifier (isspace/isdigit/isalnum/else)'=1.0000 (higher is better)
        -> The baseline still wins. Do NOT tune hyperparameters yet -- that is the expensive way to discover a scoping error. In order: (1) improve the input representation, which is where most tiny-model gains live; (2) check label quality on 20 disagreements by hand; (3) if neither moves it, write this up as a negative result and ship the baseline.
-[PASS] size: artifact 0.1 KB vs budget 5.0 KB
+[PASS] size: artifact 0.7 KB vs budget 5.0 KB
 [PASS] latency: p95 0.0 ms vs 'instant' band ceiling 100 ms
 [PASS] patience: last 2 evals ['0.9200', '0.9200'] vs best-before 0.9040
 [PASS] wallclock: 0.0 min elapsed vs cap 5 min
 
 accuracy / size / latency curve:
 variant           acc    size KB    p95 ms
-lookup-250     0.9040        0.1       0.0
-lookup-1000    0.9200        0.1       0.0
-lookup-4000    0.9200        0.1       0.0
+lookup-250     0.9040        0.7       0.0
+lookup-1000    0.9200        0.7       0.0
+lookup-4000    0.9200        0.7       0.0
 
 Outcome: the deterministic baseline wins, so the baseline ships.
 That is a successful run. The harness cost you one second to learn it
@@ -214,8 +214,8 @@ Three different answers, and the README used to blur them.
 | Layer | What it actually needs |
 |---|---|
 | **The five gates** | Five numbers. `run_all` takes floats and a sequence of floats; `gates.py` imports nothing outside the standard library and this package |
-| **Size measurement** | `stat()` and a division. It measures a `.wasm`, a Swift binary and an `.mlpackage` identically, because it never opens the file |
-| **Promotion** | Copies a file or a directory without inspecting it. The `target` field is not even validated — write `rust-wasm` and everything still runs |
+| **Size measurement** | `stat()` and a division. It measures a `.wasm`, a Swift binary and an `.mlpackage` identically, because it never opens the file — which is why promotion can afford to run it on anything |
+| **Promotion** | Copies a file or a directory, having measured its bytes and re-run the size gate on them. That is the only thing it inspects: the `target` field is not even validated — write `rust-wasm` and everything still runs |
 | **Latency** | `latency_ms` times a *Python callable* — the one real boundary. But `latency_gate` takes a bare float, so measure p95 in your own runtime and hand the number over |
 | **The workflow layer** | Claude Code. `AGENTS.md` is already vendor-neutral and the skills are plain Markdown, so the doctrine ports even where the tooling doesn't |
 | **The training guard** | bash. On Windows it is silently absent — the test skips rather than fails |
@@ -300,7 +300,7 @@ harness/       the contract, the spike, the gates, profiling, promotion, CLI —
 docs/          concepts, harness design, stop conditions, do's and don'ts,
                how to prompt the agent
 examples/      01 dependency-free in a second; 02 trains, exports, quantizes
-tests/         352 of them, including the hooks and the gate arithmetic
+tests/         367 of them, including the hooks and the gate arithmetic
 CHANGELOG.md   what changed, with gate semantics as its own category — a
                stricter gate invalidates a run that already passed
 ```
