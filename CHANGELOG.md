@@ -43,12 +43,13 @@ remediation is a `Changed`.
   gate on a self-reported 1 KB, print `PASS`, and promote a 4 MB file, with the
   champion card recording 1 KB. Strictly stricter, and #24.
 
-  **This one does invalidate something in-tree.**
-  `examples/02-config-lexer/run.py` gates the int8 eval (4985 bytes) and then
-  hands `promote()` the fp32 `best_path` (8641 bytes) — the card would have
-  reported the first file's number for the second file's bytes. It is latent
-  there only because the baseline wins and promotion never runs, but it is the
-  defect, in the one example that measures everything else correctly.
+  **This one did invalidate something in-tree.**
+  `examples/02-config-lexer/run.py` gated the int8 eval (4985 bytes) and then
+  handed `promote()` the fp32 `best_path` (8641 bytes) — the card would have
+  reported the first file's number for the second file's bytes. It was latent
+  there only because the baseline wins and promotion never runs, but it was the
+  defect, in the one example that measures everything else correctly. Filed as
+  #27 and fixed below.
 
   No tolerance was added, deliberately. Refusing when the claimed and measured
   numbers merely *disagree* needs a threshold nobody has measured, and an
@@ -161,6 +162,24 @@ remediation is a `Changed`.
   `patience_gate`, `run_all`, `evaluate_promotion` and `promote` keep their
   `higher_is_better` parameter as an override; it now defaults to `None`,
   meaning *ask the contract*.
+- The promotion report names the candidate, and the champion card gains
+  `variant` beside `artifact`. `promote()` takes the **last** eval as the
+  candidate, so the artifact handed to it has to be the one that eval
+  describes — an invariant nothing stated and nothing recorded, which is how
+  #27 survived until someone read the source. The report's first line is now
+  `candidate: the last of 3 eval(s), variant 'conv-raw-chars-int8' — shipping
+  file 'conv-raw-chars.onnx'`, where the mismatch is the whole bug and is
+  visible in one glance.
+
+  **Not a gate change, and not a refusal.** An eval records numbers, not a
+  path; a path it did record would not survive a move between machines or a
+  re-gate a year later, leaving it exactly as trustworthy as `size_kb` was
+  before #24 but with nothing physical to check it against. The harness also
+  cannot know whether `conv-raw-chars` is a different model from
+  `conv-raw-chars-int8` or a renamed export of it. So it writes both names
+  down and refuses nothing — the same device as the `size_kb` /
+  `size_kb_reported` pair above.
+
 - The champion card gains `size_kb_reported` beside `size_kb`. `size_kb` is now
   the measured number and describes the bytes in `champion/`; `size_kb_reported`
   is what the run claimed. Both are written every time rather than only on a
@@ -209,6 +228,22 @@ remediation is a `Changed`.
 
 ### Fixed
 
+- `examples/02-config-lexer` promotes the int8 artifact it gated, not the fp32
+  one it quantized from (#27). The run records three evals, the last being the
+  int8 quantization, and `promote()` reads the last eval — but the call passed
+  `best_path`, so `champion/` would have held an 8.4 KB file described by a
+  4.9 KB eval. The printed copy-paste `ship` command named the same wrong file,
+  so following the documented invocation reproduced it by hand.
+
+  int8 is also simply the better ship here: identical held-out accuracy to the
+  fp32 it came from (0.7892), at 42% of the bytes.
+
+  The generated model card now reads every number from the final eval as well.
+  It took size and latency from there while taking accuracy from
+  `max(rows, key=accuracy)` — the best row across *all* variants — so the first
+  time quantization cost any accuracy, the card would have paired one model's
+  score with another's bytes. No number moves today, because int8 ties fp32 and
+  `max()` returns the first of equals; it is read from the row it describes.
 - The sibling-project link called `On-Device ML Optimization` a *lens*. That
   repo draws a line between thinking lenses, for deciding what to build, and
   engineering skills, for building it well — and it is one of the latter. The
