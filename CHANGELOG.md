@@ -253,6 +253,19 @@ remediation is a `Changed`.
 
 ### Fixed
 
+- The author is spelled one way (#22). `LICENSE` and `pyproject.toml` said
+  *Melissa Pereira* while the README footer said *Melissa de Britto*; the
+  first two now match the footer. More than a typo, because the line that
+  moved is the copyright notice, and because it had already propagated —
+  harmonic-parser copied `LICENSE` verbatim and wrote its own footer, so both
+  spellings were live in two repositories.
+
+  `tests/test_project.py::TestPackaging::test_the_author_is_spelled_one_way`
+  keeps the three files in step. Unlike the version beside it, they cannot be
+  made to agree by construction — a name is a literal in each, with nowhere
+  sensible to put the single copy — so it is a sensor rather than a
+  refactor, and it checks the old spelling is *absent* as well as the new one
+  present. A rename that stops halfway is the failure worth catching.
 - `.gitignore` covers what an example leaves behind when it promotes (#28).
   Lines 6-9 (`champion/*.onnx` and friends) each contain a slash, so git
   anchors them to the repo root; they never reached `examples/*/champion/`, and
