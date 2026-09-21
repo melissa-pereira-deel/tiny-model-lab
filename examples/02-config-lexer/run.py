@@ -4,9 +4,10 @@ Example 01 is dependency-free and stops at the gate. This one goes the rest of
 the way: PyTorch → ONNX → onnxruntime, with the artifact measured in bytes on
 disk, the conversion verified numerically, and a model card written at the end.
 
-The export happens *inside* the eval loop, not after promotion, because
-`size_gate` measures the exported artifact rather than a parameter count. So the
-export path is exercised whichever way the baseline gate goes.
+The export happens *inside* the eval loop, not after promotion, because the
+size budget is about exported bytes rather than a parameter count. So the export
+path is exercised whichever way the baseline gate goes -- `artifact_size_kb`
+measures each one here, and `promote()` measures again whatever it is handed.
 
 Needs the heavier extras:
 
@@ -277,10 +278,15 @@ def main() -> int:
     # Calling promote() directly is the right thing from inside a Python program
     # — `python -m harness ship` calls the same function, and would reprint the
     # whole gate report this script has already printed.
+    # The int8 file, not `best_path`. `promote()` takes the *last* eval as the
+    # candidate, and the last eval here is the int8 one — handing it the fp32
+    # file put an 8.4 KB artifact in champion/ under a 4.9 KB eval (#27). int8
+    # is also simply the better ship: same held-out accuracy as the fp32 it
+    # came from, at 42% of the bytes.
     champion = HERE / "champion"
     verdict = promote(
         run_dir,
-        best_path,
+        int8_path,
         champion_dir=champion,
         ledger=champion / "LEDGER.md",
     )
@@ -289,11 +295,11 @@ def main() -> int:
         "the same call from a shell:\n"
         "  python -m harness ship \\\n"
         f"    {os.path.relpath(run_dir)} \\\n"
-        f"    {os.path.relpath(best_path)} \\\n"
+        f"    {os.path.relpath(int8_path)} \\\n"
         f"    --champion-dir {os.path.relpath(champion)}"
     )
 
-    write_model_card(run_dir, exp, rows, int8_disagree)
+    write_model_card(run_dir, exp, int8_disagree)
     print(f"model card: {run_dir / 'MODEL_CARD.md'}")
 
     beat = max(history) > exp.baseline.value
@@ -311,10 +317,15 @@ def main() -> int:
     return 0
 
 
-def write_model_card(run_dir: Path, exp: Experiment, rows, int8_disagree: float) -> None:
+def write_model_card(run_dir: Path, exp: Experiment, int8_disagree: float) -> None:
+    # Every number comes from `final`, the eval that describes the artifact
+    # that shipped. It used to take the accuracy from max(rows), which is the
+    # best row across all variants -- so the moment quantization cost any
+    # accuracy, the card paired one model's score with another's bytes. The
+    # figure does not move today, because int8 ties fp32 here and max() returns
+    # the first of equals; it is now read from the row it claims to describe.
     manifest = json.loads((run_dir / "manifest.json").read_text())
     final = manifest["evals"][-1]
-    best_row = max(rows, key=lambda r: r["accuracy"])
     template = (Path(__file__).resolve().parents[2] / "harness/templates/MODEL_CARD.md").read_text()
     card = template.replace("# Model card: <name>", "# Model card: config-lexer (example 02)")
     card += f"""
@@ -325,10 +336,11 @@ def write_model_card(run_dir: Path, exp: Experiment, rows, int8_disagree: float)
 
 | | |
 |---|---|
+| Variant shipped | {final.get("variant", "unnamed")} |
 | Size (shipped bytes) | {final["size_kb"] * 1024:.0f} |
 | p95 latency (warm, this machine) | {final["p95_ms"]:.3f} ms |
 | Cold start | {final.get("cold_ms", float("nan")):.1f} ms |
-| Metric vs baseline | {best_row["accuracy"]:.4f} vs {exp.baseline.value:.4f} |
+| Metric vs baseline | {final["metric_value"]:.4f} vs {exp.baseline.value:.4f} |
 | Baseline it must beat | {exp.baseline.name} |
 | Disagreement (fp32 vs int8) | {int8_disagree:.4f} |
 
