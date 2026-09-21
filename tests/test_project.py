@@ -397,11 +397,13 @@ class TestMeasuredSize:
     def test_the_example_02_skew(self, tmp_path: Path) -> None:
         """The in-tree case, as a unit.
 
-        examples/02-config-lexer gates the int8 eval (4985 bytes) and then
-        passes `best_path`, the fp32 file (8641 bytes), to promote(). The card
-        used to report the eval's number for the other file's bytes. It is
-        latent there only because the baseline wins -- but it is the defect in
-        the one example that measures everything else correctly.
+        examples/02-config-lexer used to gate the int8 eval (4985 bytes) and
+        then pass `best_path`, the fp32 file (8641 bytes), to promote(), so the
+        card reported the eval's number for the other file's bytes. It never
+        executed -- the baseline wins there -- but it was the defect in the one
+        example that measures everything else correctly. The example ships the
+        int8 file now (#27); these numbers stay as a regression test for the
+        harness behaviour, which is what made the mismatch visible.
         """
         run_dir = self.run_claiming(tmp_path / "runs", claimed_kb=4985 / 1024)
         shipped = tmp_path / "conv-raw-chars.onnx"
@@ -413,3 +415,107 @@ class TestMeasuredSize:
         card = json.loads((champion / "champion.json").read_text())
         assert card["size_kb"] == 8641 / 1024
         assert card["size_kb_reported"] == 4985 / 1024
+
+
+class TestCandidateIsNamed:
+    """#27: the report and the card say which eval is shipping as which file.
+
+    `promote()` takes the last eval as the candidate, so the artifact handed to
+    it must be the one that eval describes. Nothing can check that -- an eval
+    records numbers, not a path -- so this refuses nothing. It writes the two
+    names down together, which is what nobody had done and why #27 survived
+    until someone read the source.
+    """
+
+    def run_with(self, runs_dir: Path, **eval_metrics) -> Path:
+        exp = Experiment.from_yaml(EXAMPLE_SPEC)
+        exp.baseline.value = 0.50
+        exp.budgets.max_size_kb = 1000
+        run_dir = start_run(exp, runs_dir=runs_dir)
+        metrics = {
+            "variant": "conv-raw-chars-int8",
+            "metric_value": 0.99,
+            "size_kb": 4985 / 1024,
+            "p95_ms": 1.0,
+            "elapsed_minutes": 0.1,
+        }
+        metrics.update(eval_metrics)
+        record_eval(run_dir, **metrics)
+        return run_dir
+
+    def test_the_report_names_the_eval_and_the_file(self, tmp_path: Path) -> None:
+        run_dir = self.run_with(tmp_path / "runs")
+        artifact = tmp_path / "conv-raw-chars-int8.onnx"
+        artifact.write_bytes(b"\0" * 4985)
+
+        ok, message = evaluate_promotion(
+            run_dir, artifact=artifact, champion_dir=tmp_path / "c"
+        )
+
+        assert ok, message
+        assert "the last of 1 eval(s)" in message
+        assert "'conv-raw-chars-int8'" in message
+        assert "'conv-raw-chars-int8.onnx'" in message
+
+    def test_a_mismatch_is_visible_in_the_report(self, tmp_path: Path) -> None:
+        """#27 exactly: the int8 eval shipping the fp32 file.
+
+        Not a refusal. The harness has no way to know that `conv-raw-chars` is
+        a different model from `conv-raw-chars-int8` rather than a renamed
+        export of it, and inventing a naming convention to guess with would
+        fail on the first project that does not share it.
+        """
+        run_dir = self.run_with(tmp_path / "runs")
+        fp32 = tmp_path / "conv-raw-chars.onnx"
+        fp32.write_bytes(b"\0" * 8641)
+
+        ok, message = evaluate_promotion(
+            run_dir, artifact=fp32, champion_dir=tmp_path / "c"
+        )
+
+        assert ok, "still promotes -- this is legibility, not a gate"
+        assert "variant 'conv-raw-chars-int8'" in message
+        assert "shipping file 'conv-raw-chars.onnx'" in message
+
+    def test_the_card_records_the_variant(self, tmp_path: Path) -> None:
+        run_dir = self.run_with(tmp_path / "runs")
+        artifact = tmp_path / "conv-raw-chars-int8.onnx"
+        artifact.write_bytes(b"\0" * 4985)
+        champion = tmp_path / "c"
+
+        promote(run_dir, artifact, champion_dir=champion, ledger=tmp_path / "L.md")
+
+        card = json.loads((champion / "champion.json").read_text())
+        assert card["variant"] == "conv-raw-chars-int8"
+        assert card["artifact"] == "conv-raw-chars-int8.onnx"
+
+    def test_an_eval_without_a_variant_does_not_raise(self, tmp_path: Path) -> None:
+        """`record_eval` takes arbitrary keywords and REQUIRED_EVAL_KEYS does
+        not include `variant`, so it is not guaranteed to be there. `gate_run`
+        already degrades to 'unnamed'; this does the same rather than crashing
+        a promotion over a missing label."""
+        exp = Experiment.from_yaml(EXAMPLE_SPEC)
+        exp.baseline.value = 0.50
+        exp.budgets.max_size_kb = 1000
+        run_dir = start_run(exp, runs_dir=tmp_path / "runs")
+        record_eval(
+            run_dir, metric_value=0.99, size_kb=1.0, p95_ms=1.0, elapsed_minutes=0.1
+        )
+        artifact = tmp_path / "model.onnx"
+        artifact.write_bytes(b"\0" * 1024)
+        champion = tmp_path / "c"
+
+        result = promote(run_dir, artifact, champion_dir=champion, ledger=tmp_path / "L.md")
+
+        assert result.startswith("PROMOTED"), result
+        assert "variant 'unnamed'" in result
+        card = json.loads((champion / "champion.json").read_text())
+        assert card["variant"] == "unnamed"
+
+    def test_without_an_artifact_it_says_so(self, tmp_path: Path) -> None:
+        run_dir = self.run_with(tmp_path / "runs")
+
+        ok, message = evaluate_promotion(run_dir, champion_dir=tmp_path / "c")
+
+        assert ok, message
+        assert "no file named" in message

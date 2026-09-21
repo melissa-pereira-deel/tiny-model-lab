@@ -81,6 +81,25 @@ def size_provenance(artifact: Path | None, size_kb: float, reported_kb: float) -
     )
 
 
+def candidate_line(final: dict, artifact: Path | None, eval_count: int) -> str:
+    """Which eval is being promoted, and which file is going with it.
+
+    `promote()` takes the *last* eval as the candidate, so the artifact handed
+    to it has to be the one that eval describes. Nothing here can check that:
+    an eval records numbers, not a path, and a path it did record would not
+    survive a move between machines or a re-gate a year later — it would be as
+    trustworthy as `size_kb` was before #24, with nothing physical to check it
+    against. So this refuses nothing. It prints both names and lets a reader
+    see a variant called `conv-raw-chars-int8` shipping as a file called
+    `conv-raw-chars.onnx`, which is #27 and took reading the source to find.
+    """
+    variant = final.get("variant", "unnamed")
+    where = f"the last of {eval_count} eval(s)"
+    if artifact is None:
+        return f"candidate: {where}, variant {variant!r} — no file named"
+    return f"candidate: {where}, variant {variant!r} — shipping file {Path(artifact).name!r}"
+
+
 def evaluate_promotion(
     run_dir: Path,
     *,
@@ -148,7 +167,11 @@ def evaluate_promotion(
         higher_is_better=higher_is_better,
     )
     report = "\n".join(
-        [size_provenance(artifact, size_kb, reported_kb), *(str(r) for r in results)]
+        [
+            candidate_line(final, artifact, len(evals)),
+            size_provenance(artifact, size_kb, reported_kb),
+            *(str(r) for r in results),
+        ]
     )
     if not passed:
         return False, f"gates failed:\n{report}"
@@ -216,6 +239,11 @@ def promote(
         "git_sha": manifest["git_sha"],
         "task": manifest["experiment"]["task"],
         "artifact": dest.name,
+        # Beside the filename on purpose. The card is the only surviving record
+        # of which eval this file was supposed to be, and the two disagreeing
+        # is #27 -- which nothing detected, because nothing wrote them down
+        # together.
+        "variant": final.get("variant", "unnamed"),
         "metric": manifest["experiment"]["baseline"]["metric"],
         "metric_value": final["metric_value"],
         # Measured, not claimed. A second stat() of a path `evaluate_promotion`
