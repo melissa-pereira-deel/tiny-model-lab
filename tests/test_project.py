@@ -159,6 +159,38 @@ class TestPackaging:
             pytest.skip("package not installed, so there is no metadata to compare")
         assert installed == harness.__version__
 
+    def test_the_author_is_spelled_one_way(self) -> None:
+        """#22: LICENSE, pyproject and the README footer disagreed for months.
+
+        Unlike the version above, these three cannot be made to agree by
+        construction -- a name is a literal in each file, and there is nowhere
+        sensible to put the single copy. So this is a sensor instead, and the
+        second half is the one that earns its place: a rename that stops
+        halfway leaves the old spelling somewhere, and nothing else in this
+        repo would notice.
+
+        It cannot reach harmonic-parser, which copied LICENSE verbatim and is
+        a different repository. That one is kept in step by hand.
+
+        Read as UTF-8 explicitly, not because it is tidy. `read_text()` with
+        no encoding inherits the locale's, which on a default Windows console
+        is cp1252 -- and README.md's status block opens with a U+26A0 U+FE0F
+        warning sign whose last byte is 0x8F, one of the five bytes cp1252
+        leaves undefined. The first version of this test passed everywhere
+        except both Windows legs of CI. Same family as #11, which fixed the
+        output side and left the input side alone.
+        """
+        author = "Melissa de Britto"
+        superseded = "Melissa Pereira"
+        for name in ("LICENSE", "pyproject.toml", "README.md"):
+            text = (REPO_ROOT / name).read_text(encoding="utf-8")
+            assert author in text, f"{name} does not name the author as {author!r}"
+            assert superseded not in text, (
+                f"{name} still carries the superseded spelling {superseded!r}. "
+                "The GitHub org slug melissa-pereira-deel is a handle and is "
+                "spelled differently, so it does not trip this."
+            )
+
 
 class TestPromotionDirection:
     """#23's most expensive half: the champion comparison running backwards.

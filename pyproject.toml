@@ -11,7 +11,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
-authors = [{ name = "Melissa Pereira" }]
+authors = [{ name = "Melissa de Britto" }]
 keywords = ["tiny-models", "on-device", "edge-ai", "design-engineering", "claude-code", "harness"]
 # No "License ::" classifier: deprecated alongside the old license table, and
 # redundant now that `license` carries an SPDX expression.
