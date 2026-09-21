@@ -29,7 +29,7 @@ you can prove it beat the four lines of code it replaced.
 
 > **⚠️ Status: early, and measured about it.**
 >
-> The harness, the gates, the CLI and both worked examples run today, with 393
+> The harness, the gates, the CLI and both worked examples run today, with 430
 > tests and CI on Python 3.10 and 3.14 across Ubuntu and Windows. The six
 > commands, five subagents and six skills are written and usable; they have not
 > been evaluated at scale.
@@ -236,12 +236,22 @@ repo is prose — there is no hardware-specific code anywhere in `harness/`.
 ```bash
 pip install git+https://github.com/melissa-pereira-deel/tiny-model-lab
 cd my-project
-python -m harness init        # creates experiments/ and runs/, drops a blank spec
+python -m harness init        # experiments/, runs/, a blank spec and a .gitignore
+cp experiments/experiment.yaml.template experiments/my-task.yaml
 ```
 
 `init` also plants the marker the harness uses to find your project, so runs,
-champions and the ledger land in *your* directory. The CLI mirrors the slash
-commands:
+champions and the ledger land in *your* directory.
+
+The blank spec arrives as `.template` rather than `.yaml`, and the copy above is
+yours to make. The training guard asks whether any `experiments/*.yaml` exists
+and never reads it, so scaffolding one would have unlocked training in a project
+that has not scoped anything yet (#21). The `.gitignore` is written only if you
+do not already have one; it covers what the harness writes and nothing else,
+because run artifacts and the champion copy are the same bytes twice and neither
+belongs in git (#30).
+
+The CLI mirrors the slash commands:
 
 ```bash
 python -m harness validate experiments/my-task.yaml
@@ -300,7 +310,7 @@ harness/       the contract, the spike, the gates, profiling, promotion, CLI —
 docs/          concepts, harness design, stop conditions, do's and don'ts,
                how to prompt the agent
 examples/      01 dependency-free in a second; 02 trains, exports, quantizes
-tests/         393 of them, including the hooks and the gate arithmetic
+tests/         430 of them, including the hooks and the gate arithmetic
 CHANGELOG.md   what changed, with gate semantics as its own category — a
                stricter gate invalidates a run that already passed
 ```

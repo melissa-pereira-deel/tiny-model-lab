@@ -101,8 +101,33 @@ remediation is a `Changed`.
 - `ship` takes `--champion-dir DIR` and `--ledger PATH`. `--champion-dir` moves
   both the card and the ledger, so promotion can be tried without leaving files
   in a clone.
-- `harness init` scaffolds `experiments/` and `runs/` and copies the blank
-  experiment template into a new project.
+- `harness init` scaffolds `experiments/` and `runs/`, copies the blank
+  experiment template into a new project as `experiment.yaml.template`, and
+  writes a `.gitignore` when the project has none.
+
+  **The template is not written as `.yaml`, and that is the point** (#21). The
+  training guard globs `experiments/*.yaml` and never reads the file, so an
+  earlier version of this command copied the blank contract into place under
+  that name and unlocked training on every project it scaffolded — using the
+  one file `tests/test_validate.py::test_template_is_deliberately_invalid`
+  pins as invalid. Setup is the wrong moment to answer the question the guard
+  exists to ask. Copying it to `experiments/<task>.yaml` still unlocks
+  training with the form blank; the difference is that somebody chose to.
+
+  **The `.gitignore` covers what the harness writes** (#30), and nothing else
+  — a scaffolded project had none, so the first `git add -A` committed the
+  weights, and `promote()` copies the artifact into `champion/` so the same
+  bytes land twice per promotion. An existing file is left alone: appending
+  cannot be done twice safely, and anyone who already has one has opinions
+  about it. Re-running `init` also names an `experiments/experiment.yaml`
+  left by the older version, since that is the only moment the harness gets
+  to mention it; it reports and deletes nothing.
+
+  `init` had no tests at all before this. It has `tests/test_init.py` now,
+  plus the two properties above pinned where they are enforced rather than
+  where they are described — `tests/test_guard_hook.py` scaffolds a project
+  and asserts the guard still blocks, and `tests/test_gitignore.py` scaffolds
+  one into a real repository and asks git.
 - `validate` accepts several paths, so `examples/*/experiment.yaml` works.
 - `gate_run()`, `band_landed_in()`, `load_run()`, `eval_history()` and
   `Experiment.from_dict()` in the library — one owner for reading a run back.

@@ -29,8 +29,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="asks git about its own rules")
 
 
-def is_ignored(path: str) -> bool:
+def is_ignored(path: str, cwd: Path = REPO_ROOT) -> bool:
     """Would git ignore this path? Asked of git, not inferred from the file.
+
+    `cwd` is the repository to ask. It defaults to this one; the scaffolded
+    projects below pass their own, which is the whole reason it is a parameter.
 
     `-q` rather than `-v`, and the difference is not cosmetic: with `-v`, git
     reports *any* matching pattern including a negation, so `runs/LEDGER.md`
@@ -49,7 +52,7 @@ def is_ignored(path: str) -> bool:
         ["git", "check-ignore", "-q", "--no-index", path],
         capture_output=True,
         text=True,
-        cwd=REPO_ROOT,
+        cwd=cwd,
         check=False,
     )
     if proc.returncode not in (0, 1):
@@ -126,3 +129,73 @@ def test_the_helper_can_tell_the_two_apart() -> None:
     """
     assert not is_ignored("README.md")
     assert is_ignored("harness/__pycache__/promote.cpython-314.pyc")
+
+
+class TestWhatInitScaffolds:
+    """#30: the same rule, one level out.
+
+    This repo's `.gitignore` is hand-written and now tested. A project made by
+    `harness init` got nothing at all, so its first `git add -A` committed the
+    weights -- and `promote()` copies the artifact into champion/, so the same
+    bytes land twice per promotion. By the time a repository is too big to
+    clone, the bytes are in the history.
+
+    These scaffold a real project into tmp_path and ask git about *that*
+    repository, so they exercise the shipped template rather than a copy of it.
+    """
+
+    @pytest.fixture
+    def project(self, tmp_path: Path) -> Path:
+        from harness.init import scaffold
+
+        subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True, capture_output=True)
+        scaffold(tmp_path)
+        return tmp_path
+
+    def test_init_writes_one(self, project: Path) -> None:
+        assert (project / ".gitignore").is_file()
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "runs/20260101T000000Z--task/artifacts/model.onnx",
+            "runs/20260101T000000Z--task/checkpoints/epoch3.bin",
+            "champion/model.onnx",
+            "champion/model.safetensors",
+            "champion/model.mlpackage/weights.bin",
+            "data/corpus.jsonl",
+            "corpora/raw.txt",
+            "checkpoint.pt",
+        ],
+    )
+    def test_the_bytes_are_ignored(self, project: Path, path: str) -> None:
+        assert is_ignored(path, cwd=project)
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "runs/20260101T000000Z--task/manifest.json",
+            "runs/LEDGER.md",
+            "champion/champion.json",
+        ],
+    )
+    def test_the_decision_trail_is_not(self, project: Path, path: str) -> None:
+        """Same asymmetry as this repo's own root, and for the same reason: a
+        manifest says what was tried and what won, and it is small."""
+        assert not is_ignored(path, cwd=project)
+
+    def test_the_scaffolded_files_are_committable(self, project: Path) -> None:
+        """The template and the ignore file itself are the project's, and
+        belong in its first commit."""
+        assert not is_ignored(".gitignore", cwd=project)
+        assert not is_ignored("experiments/experiment.yaml.template", cwd=project)
+
+    def test_an_existing_gitignore_is_left_alone(self, tmp_path: Path) -> None:
+        """`init` never edits a file it did not write. Appending cannot be done
+        twice safely, and anyone who already has a .gitignore has opinions."""
+        from harness.init import scaffold
+
+        mine = tmp_path / ".gitignore"
+        mine.write_text("# mine\n*.log\n")
+        scaffold(tmp_path)
+        assert mine.read_text() == "# mine\n*.log\n"
