@@ -65,6 +65,19 @@ def scoped_project(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
+def scaffolded_project(tmp_path: Path) -> Path:
+    """A project straight out of `python -m harness init`, untouched.
+
+    The real thing, not an imitation: this calls `scaffold()` so the test
+    breaks if init ever goes back to writing a `.yaml`.
+    """
+    from harness.init import scaffold
+
+    scaffold(tmp_path)
+    return tmp_path
+
+
+@pytest.fixture
 def spiked_project(tmp_path: Path) -> Path:
     """A project holding a spike record and nothing else.
 
@@ -145,6 +158,42 @@ def test_a_spike_record_alongside_a_contract_changes_nothing(
     """The other direction: it does not *lock* anything either."""
     (scoped_project / SPEC_DIR.name / "tagger.spike.md").write_text("---\nquestion: q\n---\n")
     assert not run_guard(TRAINING_COMMAND, scoped_project)
+
+
+@pytest.mark.parametrize("command", BLOCKED_WITHOUT_A_SPEC)
+def test_scaffolding_a_project_does_not_unlock_training(
+    command: str, scaffolded_project: Path
+) -> None:
+    """#21, and the one the guard exists for.
+
+    `init` used to copy the blank contract to `experiments/experiment.yaml`.
+    The guard asks whether any `experiments/*.yaml` exists and never reads it,
+    so every scaffolded project had training unlocked from minute one -- by
+    the single file `tests/test_validate.py::test_template_is_deliberately_invalid`
+    pins as invalid. The harness disarmed its own tripwire during setup, at
+    exactly the moment the tripwire is for: the first run in a fresh repo.
+
+    It writes `experiment.yaml.template` now. Nothing in the guard knows that;
+    the property is again a coincidence of two filenames, so this pins it the
+    way `spiked_project` above pins the `.md` one.
+    """
+    assert run_guard(command, scaffolded_project), f"a fresh scaffold must not unlock: {command}"
+
+
+def test_the_scaffolded_form_unlocks_once_you_choose_to_copy_it(
+    scaffolded_project: Path,
+) -> None:
+    """The hole this deliberately leaves, pinned so it stays deliberate.
+
+    Copying the blank form to `<task>.yaml` without filling it in still
+    unlocks training -- the guard reads no files, by design, and teaching it
+    to parse YAML would cost the no-interpreter degradation that
+    `TestWithoutPython3` covers. The difference from #21 is that this is now
+    something somebody did, rather than something setup did for them.
+    """
+    spec_dir = scaffolded_project / SPEC_DIR.name
+    shutil.copy2(spec_dir / "experiment.yaml.template", spec_dir / "tagger.yaml")
+    assert not run_guard(TRAINING_COMMAND, scaffolded_project)
 
 
 def test_worked_example_runs_even_when_scoped(scoped_project: Path) -> None:
