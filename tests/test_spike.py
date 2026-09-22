@@ -52,7 +52,7 @@ def write_spike(tmp_path: Path, **overrides: Any) -> Path:
     fields = {k: v for k, v in fields.items() if v is not DROP}
     path = tmp_path / "tagger.spike.md"
     body = yaml.safe_dump(fields, sort_keys=False, allow_unicode=False)
-    path.write_text(f"---\n{body}---\n\n# tagger\n\nProse nobody parses.\n")
+    path.write_text(f"---\n{body}---\n\n# tagger\n\nProse nobody parses.\n", encoding="utf-8")
     return path
 
 
@@ -75,26 +75,29 @@ class TestShippedFiles:
 class TestTheFrontmatter:
     def test_a_file_with_no_frontmatter_is_refused(self, tmp_path: Path) -> None:
         path = tmp_path / "tagger.spike.md"
-        path.write_text("# tagger\n\nI measured a thing once.\n")
+        path.write_text("# tagger\n\nI measured a thing once.\n", encoding="utf-8")
         problems = spike_problems(path)
         assert any("no YAML frontmatter" in p for p in problems)
 
     def test_unparseable_frontmatter_reports_why(self, tmp_path: Path) -> None:
         path = tmp_path / "tagger.spike.md"
-        path.write_text("---\nquestion: [unclosed\n---\n")
+        path.write_text("---\nquestion: [unclosed\n---\n", encoding="utf-8")
         problems = spike_problems(path)
         assert len(problems) == 1
         assert problems[0].startswith("could not parse the frontmatter:")
 
     def test_frontmatter_that_is_not_a_mapping_is_refused(self, tmp_path: Path) -> None:
         path = tmp_path / "tagger.spike.md"
-        path.write_text("---\n- just\n- a list\n---\n")
+        path.write_text("---\n- just\n- a list\n---\n", encoding="utf-8")
         assert any("not a mapping" in p for p in spike_problems(path))
 
     def test_the_prose_below_is_not_parsed(self, tmp_path: Path) -> None:
         """The body is where the working goes; only the form is checked."""
         path = write_spike(tmp_path)
-        path.write_text(path.read_text() + "\n---\n\nquestion: not this one\n")
+        path.write_text(
+            path.read_text(encoding="utf-8") + "\n---\n\nquestion: not this one\n",
+            encoding="utf-8",
+        )
         assert spike_problems(path) == []
 
     def test_load_spike_returns_the_fields(self, tmp_path: Path) -> None:
@@ -283,15 +286,15 @@ class TestFindSpikes:
     def test_finds_records_in_the_spec_directory(self, tmp_path: Path) -> None:
         (tmp_path / "experiments").mkdir()
         for name in ("a.spike.md", "b.spike.md"):
-            (tmp_path / "experiments" / name).write_text("---\nquestion: q\n---\n")
+            (tmp_path / "experiments" / name).write_text("---\nquestion: q\n---\n", encoding="utf-8")
         assert [p.name for p in find_spikes(tmp_path)] == ["a.spike.md", "b.spike.md"]
 
     def test_ignores_contracts_and_refusals(self, tmp_path: Path) -> None:
         """A spike record is not a contract and not a refusal. The suffix is
         what keeps the three apart in one directory."""
         (tmp_path / "experiments").mkdir()
-        (tmp_path / "experiments" / "tagger.yaml").write_text("task: t\n")
-        (tmp_path / "experiments" / "tagger-refused.md").write_text("no\n")
+        (tmp_path / "experiments" / "tagger.yaml").write_text("task: t\n", encoding="utf-8")
+        (tmp_path / "experiments" / "tagger-refused.md").write_text("no\n", encoding="utf-8")
         assert find_spikes(tmp_path) == []
 
     def test_a_project_with_no_spec_directory_is_not_an_error(self, tmp_path: Path) -> None:

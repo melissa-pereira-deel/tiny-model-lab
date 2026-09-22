@@ -40,7 +40,7 @@ def ledger_for(ledger: Path | None = None) -> Path:
 
 def _load_champion(champion_dir: Path | None = None) -> dict | None:
     card = champion_dir_for(champion_dir) / "champion.json"
-    return json.loads(card.read_text()) if card.exists() else None
+    return json.loads(card.read_text(encoding="utf-8")) if card.exists() else None
 
 
 def gated_size_kb(artifact: Path | None, reported_kb: float) -> float:
@@ -257,14 +257,15 @@ def promote(
         "p95_ms": final["p95_ms"],
         "beats_baseline": manifest["experiment"]["baseline"]["name"],
     }
-    (champ_dir / "champion.json").write_text(json.dumps(card, indent=2))
+    (champ_dir / "champion.json").write_text(json.dumps(card, indent=2), encoding="utf-8")
 
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     if not ledger_path.exists():
         ledger_path.write_text(
-            "# Promotion ledger\n\nAppend-only. Every champion, in order.\n\n"
+            "# Promotion ledger\n\nAppend-only. Every champion, in order.\n\n",
+            encoding="utf-8",
         )
-    with ledger_path.open("a") as fh:
+    with ledger_path.open("a", encoding="utf-8") as fh:
         fh.write(
             f"- `{card['promoted_at']}` **{card['task']}** — "
             f"{card['metric']}={card['metric_value']:.4f}, "

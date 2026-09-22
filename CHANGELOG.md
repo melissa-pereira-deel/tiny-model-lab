@@ -253,6 +253,37 @@ remediation is a `Changed`.
 
 ### Fixed
 
+- Every text read and write says UTF-8 (#34). `read_text()` with no encoding
+  uses the locale's, which is **cp1252** on a default Windows install — and
+  cp1252 has no mapping for five byte values, so a UTF-8 file containing one
+  raises. `Experiment.from_yaml` and `load_spike` read files a *user* wrote,
+  and the repo's own template prose is full of em dashes, so this was a live
+  bug on a supported platform rather than a tidiness point.
+
+  **The quieter half is worse than the crash.** Most non-ASCII decodes fine
+  under cp1252 and simply decodes *wrong*: an em dash is `E2 80 94` and
+  cp1252 maps all three bytes, so `CHANGELOG.md` came back as mojibake and
+  nothing raised. Silent corruption where it decoded, an exception where it
+  did not, and which one you got depended on whether the file happened to
+  contain an emoji. The write side had the same split — the ledger was
+  written in the locale encoding and round-tripped only on the machine that
+  wrote it.
+
+  This is #11's family. That issue fixed the *output* side — `gates.py` went
+  ASCII, the CLI and examples declare UTF-8 on stdout — and left reading
+  alone. Found when a test added for #22 read `README.md` and died on both
+  Windows legs of CI: the status block opens with U+26A0 U+FE0F, whose last
+  byte is `0x8F`, one of the five.
+
+  `tests/test_encoding.py::TestEveryReadSaysWhatItMeans` walks the **AST** of
+  every file under `harness/`, `tests/` and `examples/` and fails on any
+  `read_text`, `write_text` or `open` without an `encoding`, skipping binary
+  modes. Parsed rather than grepped, because a regex cannot see that the
+  ledger write spans three lines with its `encoding=` on the second. Verified
+  end to end under `PYTHONUTF8=0 LC_ALL=C`, where the preferred encoding is
+  `US-ASCII`: a contract and a spike record full of em dashes and emoji now
+  load, promote and round-trip through the ledger, and reverting one call
+  site reproduces the original `UnicodeDecodeError`.
 - The author is spelled one way (#22). `LICENSE` and `pyproject.toml` said
   *Melissa Pereira* while the README footer said *Melissa de Britto*; the
   first two now match the footer. More than a typo, because the line that

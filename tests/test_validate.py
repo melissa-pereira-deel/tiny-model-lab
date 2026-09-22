@@ -48,7 +48,7 @@ def write_experiment(tmp_path: Path, **overrides) -> Path:
         else:
             spec[section] = value
     path = tmp_path / "experiment.yaml"
-    path.write_text(yaml.safe_dump(spec))
+    path.write_text(yaml.safe_dump(spec), encoding="utf-8")
     return path
 
 
@@ -123,7 +123,7 @@ class TestOtherRules:
 
     def test_unparseable_file_reports_why(self, tmp_path: Path) -> None:
         path = tmp_path / "experiment.yaml"
-        path.write_text("task: [unclosed\n")
+        path.write_text("task: [unclosed\n", encoding="utf-8")
         problems = validate(path)
         assert len(problems) == 1
         assert problems[0].startswith("could not parse:")

@@ -42,7 +42,7 @@ def test_the_agent_directories_are_not_empty() -> None:
 def test_every_subagent_is_reachable_by_a_command(subagent: str) -> None:
     if subagent in WITHOUT_A_COMMAND:
         pytest.skip(f"deliberately has no command: {WITHOUT_A_COMMAND[subagent]}")
-    delegating = [c.name for c in COMMANDS.glob("*.md") if subagent in c.read_text()]
+    delegating = [c.name for c in COMMANDS.glob("*.md") if subagent in c.read_text(encoding="utf-8")]
     assert delegating, (
         f"`{subagent}` has no command naming it. Either add one under "
         f".claude/commands/, or add it to WITHOUT_A_COMMAND with the reason — "
@@ -57,7 +57,7 @@ def test_every_command_is_in_the_prompting_guide(command: str) -> None:
     It described the gap in #8 as a fact rather than as a defect, which is what
     made it read as intentional for as long as it did.
     """
-    assert f"`/{command} " in PROMPTING_GUIDE.read_text(), (
+    assert f"`/{command} " in PROMPTING_GUIDE.read_text(encoding="utf-8"), (
         f"/{command} is not in the table in docs/prompting-guide.md"
     )
 
@@ -65,7 +65,7 @@ def test_every_command_is_in_the_prompting_guide(command: str) -> None:
 @pytest.mark.parametrize("command", names(COMMANDS))
 def test_every_command_has_a_description(command: str) -> None:
     """Claude Code shows the frontmatter `description` in its command list."""
-    text = (COMMANDS / f"{command}.md").read_text()
+    text = (COMMANDS / f"{command}.md").read_text(encoding="utf-8")
     match = re.search(r"^description:\s*(\S.*)$", text, flags=re.MULTILINE)
     assert match, f"/{command} has no frontmatter description"
     assert len(match.group(1).split()) >= 5, f"/{command}'s description is too terse to pick from"

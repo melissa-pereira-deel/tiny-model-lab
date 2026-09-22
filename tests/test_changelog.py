@@ -36,7 +36,7 @@ ALLOWED_SECTIONS = frozenset(
 
 @pytest.fixture(scope="module")
 def text() -> str:
-    return CHANGELOG.read_text()
+    return CHANGELOG.read_text(encoding="utf-8")
 
 
 def released_versions(text: str) -> list[str]:

@@ -196,6 +196,6 @@ class TestWhatInitScaffolds:
         from harness.init import scaffold
 
         mine = tmp_path / ".gitignore"
-        mine.write_text("# mine\n*.log\n")
+        mine.write_text("# mine\n*.log\n", encoding="utf-8")
         scaffold(tmp_path)
-        assert mine.read_text() == "# mine\n*.log\n"
+        assert mine.read_text(encoding="utf-8") == "# mine\n*.log\n"

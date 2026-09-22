@@ -83,7 +83,7 @@ def contract_fields() -> tuple[str, ...]:
     goes stale -- which is the failure this repo has already had once, in
     three files stating the same audit rule three different ways.
     """
-    raw = yaml.safe_load(CONTRACT_TEMPLATE.read_text()) or {}
+    raw = yaml.safe_load(CONTRACT_TEMPLATE.read_text(encoding="utf-8")) or {}
     return tuple(sorted(_flatten(raw)))
 
 
@@ -93,7 +93,7 @@ def load_spike(path: str | Path) -> dict[str, Any]:
     Raises ValueError with the reason when there is no frontmatter or it is not
     a mapping, so the caller has one thing to catch and one thing to print.
     """
-    text = Path(path).read_text()
+    text = Path(path).read_text(encoding="utf-8")
     match = FRONTMATTER.match(text)
     if not match:
         raise ValueError(

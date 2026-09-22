@@ -324,9 +324,9 @@ def write_model_card(run_dir: Path, exp: Experiment, int8_disagree: float) -> No
     # accuracy, the card paired one model's score with another's bytes. The
     # figure does not move today, because int8 ties fp32 here and max() returns
     # the first of equals; it is now read from the row it claims to describe.
-    manifest = json.loads((run_dir / "manifest.json").read_text())
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
     final = manifest["evals"][-1]
-    template = (Path(__file__).resolve().parents[2] / "harness/templates/MODEL_CARD.md").read_text()
+    template = (Path(__file__).resolve().parents[2] / "harness/templates/MODEL_CARD.md").read_text(encoding="utf-8")
     card = template.replace("# Model card: <name>", "# Model card: config-lexer (example 02)")
     card += f"""
 
@@ -354,7 +354,7 @@ for a Web Worker, the WebGPU backend verified against WASM, and measurement on
 target hardware; the five design-eval checks are all about a user interface.
 A `run.py` answers none of those. They are not covered here.
 """
-    (run_dir / "MODEL_CARD.md").write_text(card)
+    (run_dir / "MODEL_CARD.md").write_text(card, encoding="utf-8")
 
 
 if __name__ == "__main__":
