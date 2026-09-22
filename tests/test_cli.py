@@ -155,9 +155,9 @@ class TestLoadRun:
         """
         run_dir = make_run(tmp_path)
         manifest_path = run_dir / "manifest.json"
-        manifest = json.loads(manifest_path.read_text())
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         del manifest["evals"][0]["p95_ms"]
-        manifest_path.write_text(json.dumps(manifest))
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
         with pytest.raises(KeyError, match="p95_ms"):
             load_run(run_dir)
@@ -221,7 +221,7 @@ class TestShip:
         main(["ship", str(make_run(tmp_path)), str(self.artifact(tmp_path)),
               "--champion-dir", str(champ)])
         assert (champ / "LEDGER.md").exists()
-        assert "Promotion ledger" in (champ / "LEDGER.md").read_text()
+        assert "Promotion ledger" in (champ / "LEDGER.md").read_text(encoding="utf-8")
 
     def test_ledger_can_be_split_from_the_champion(self, tmp_path: Path) -> None:
         champ, ledger = tmp_path / "champ", tmp_path / "elsewhere" / "L.md"
@@ -315,7 +315,7 @@ class TestSpikes:
             body = cls.FRONTMATTER.format(budget=fields.get("budget", 120),
                                           elapsed=fields.get("elapsed", 0))
             body = f"---\n{body}---\n\n# a3\n"
-        (spec_dir / "a3-chord-parse.spike.md").write_text(body)
+        (spec_dir / "a3-chord-parse.spike.md").write_text(body, encoding="utf-8")
         return tmp_path
 
     def test_an_empty_project_is_not_a_failure(self, tmp_path: Path, capsys) -> None:
@@ -410,7 +410,7 @@ class TestShipMeasuresTheArtifact:
 
         main(["ship", str(run_dir), str(artifact), "--champion-dir", str(champ)])
 
-        card = json.loads((champ / "champion.json").read_text())
+        card = json.loads((champ / "champion.json").read_text(encoding="utf-8"))
         assert card["size_kb"] == 1.0           # what is in champion/
         assert card["size_kb_reported"] == 12.0  # what the runner claimed
 

@@ -210,7 +210,7 @@ class Experiment:
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> Experiment:
-        return cls.from_dict(yaml.safe_load(Path(path).read_text()))
+        return cls.from_dict(yaml.safe_load(Path(path).read_text(encoding="utf-8")))
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -248,27 +248,27 @@ def start_run(experiment: Experiment, runs_dir: Path | None = None) -> Path:
         "status": "running",
         "evals": [],
     }
-    (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return run_dir
 
 
 def record_eval(run_dir: Path, **metrics: Any) -> dict[str, Any]:
     """Append one evaluation to the run manifest and return the updated manifest."""
     manifest_path = run_dir / "manifest.json"
-    manifest = json.loads(manifest_path.read_text())
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     metrics["at"] = datetime.now(timezone.utc).isoformat()
     manifest["evals"].append(metrics)
-    manifest_path.write_text(json.dumps(manifest, indent=2))
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return manifest
 
 
 def finish_run(run_dir: Path, status: str, reason: str = "") -> None:
     manifest_path = run_dir / "manifest.json"
-    manifest = json.loads(manifest_path.read_text())
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["status"] = status
     manifest["stopped_reason"] = reason
     manifest["finished_at"] = datetime.now(timezone.utc).isoformat()
-    manifest_path.write_text(json.dumps(manifest, indent=2))
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
 
 # Gate metrics every eval must carry. `record_eval` takes **metrics and validates
@@ -290,7 +290,7 @@ def load_run(run_dir: str | Path) -> tuple[dict[str, Any], Experiment]:
     if not manifest_path.exists():
         raise FileNotFoundError(f"no manifest.json in {run_dir} — is that a run directory?")
 
-    manifest = json.loads(manifest_path.read_text())
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     for eval_index, ev in enumerate(manifest.get("evals", [])):
         missing = [k for k in REQUIRED_EVAL_KEYS if k not in ev]
         if missing:

@@ -110,7 +110,7 @@ class ToyModel:
         size gate saw had never touched a disk, and this is the example people
         copy. Export first, then measure what you exported (#24).
         """
-        path.write_text(json.dumps(self.table, sort_keys=True))
+        path.write_text(json.dumps(self.table, sort_keys=True), encoding="utf-8")
         return path
 
 

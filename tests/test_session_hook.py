@@ -51,14 +51,14 @@ def fire(project_dir: Path, payload: dict | str | None = None) -> str:
 
 def entries(project_dir: Path) -> list[str]:
     """Just the ledger lines, without the header."""
-    text = (project_dir / "runs" / "SESSIONS.md").read_text()
+    text = (project_dir / "runs" / "SESSIONS.md").read_text(encoding="utf-8")
     return [ln for ln in text.splitlines() if ln.startswith("- `")]
 
 
 class TestItWritesSomething:
     def test_first_fire_creates_the_file_with_a_header(self, tmp_path: Path) -> None:
         fire(tmp_path)
-        text = (tmp_path / "runs" / "SESSIONS.md").read_text()
+        text = (tmp_path / "runs" / "SESSIONS.md").read_text(encoding="utf-8")
         assert text.startswith("# Session log")
         assert "no conversation content" in text
         assert len(entries(tmp_path)) == 1
@@ -117,7 +117,7 @@ class TestItStillRecordsRealHistory:
     def test_a_promoted_champion_appends(self, tmp_path: Path) -> None:
         fire(tmp_path)
         (tmp_path / "champion").mkdir()
-        (tmp_path / "champion" / "champion.json").write_text(json.dumps({"task": "lex configs"}))
+        (tmp_path / "champion" / "champion.json").write_text(json.dumps({"task": "lex configs"}), encoding="utf-8")
         fire(tmp_path)
         assert "champion: lex configs" in entries(tmp_path)[-1]
 
@@ -136,6 +136,6 @@ class TestItNeverBreaksTheSession:
 
     def test_an_unreadable_champion_card_does_not_crash(self, tmp_path: Path) -> None:
         (tmp_path / "champion").mkdir()
-        (tmp_path / "champion" / "champion.json").write_text("{ not json")
+        (tmp_path / "champion" / "champion.json").write_text("{ not json", encoding="utf-8")
         fire(tmp_path)
         assert "champion: unreadable" in entries(tmp_path)[0]

@@ -100,10 +100,10 @@ class TestPromotion:
 
         assert result.startswith("PROMOTED"), result
         assert (champion / "model.onnx").exists()
-        card = json.loads((champion / "champion.json").read_text())
+        card = json.loads((champion / "champion.json").read_text(encoding="utf-8"))
         assert card["metric_value"] == 0.91
         assert card["beats_baseline"]
-        assert "0.9100" in ledger.read_text()
+        assert "0.9100" in ledger.read_text(encoding="utf-8")
 
     def test_promotion_writes_nothing_into_this_repo(self, tmp_path: Path) -> None:
         """AGENTS.md says champion/ changes only via promote(). A test must not."""
@@ -119,7 +119,7 @@ class TestPromotion:
         """Strict improvement, the same rule the baseline gate uses."""
         champion = tmp_path / "champion"
         champion.mkdir()
-        (champion / "champion.json").write_text(json.dumps({"metric_value": 0.91}))
+        (champion / "champion.json").write_text(json.dumps({"metric_value": 0.91}), encoding="utf-8")
 
         run_dir = winning_run(tmp_path / "runs")  # also 0.91
         ok, reason = evaluate_promotion(run_dir, champion_dir=champion)
@@ -242,7 +242,8 @@ class TestPromotionDirection:
         champion = tmp_path / "champion"
         champion.mkdir()
         (champion / "champion.json").write_text(
-            json.dumps({"run_id": "earlier", "metric_value": 2.00, "metric": "perplexity"})
+            json.dumps({"run_id": "earlier", "metric_value": 2.00, "metric": "perplexity"}),
+            encoding="utf-8",
         )
         # This run beats its own baseline (2.40 < 2.10 is false, so widen it)
         exp = Experiment.from_yaml(EXAMPLE_SPEC)
@@ -327,7 +328,7 @@ class TestMeasuredSize:
         result = promote(run_dir, artifact, champion_dir=champion, ledger=tmp_path / "L.md")
 
         assert result.startswith("PROMOTED"), result
-        card = json.loads((champion / "champion.json").read_text())
+        card = json.loads((champion / "champion.json").read_text(encoding="utf-8"))
         assert card["size_kb"] == 40.0
         assert card["size_kb_reported"] == 1.0
 
@@ -339,8 +340,8 @@ class TestMeasuredSize:
 
         promote(run_dir, artifact, champion_dir=tmp_path / "c", ledger=ledger)
 
-        assert "40.0 KB" in ledger.read_text()
-        assert "1.0 KB" not in ledger.read_text()
+        assert "40.0 KB" in ledger.read_text(encoding="utf-8")
+        assert "1.0 KB" not in ledger.read_text(encoding="utf-8")
 
     def test_both_numbers_are_in_the_report(self, tmp_path: Path) -> None:
         """Printed on a pass too. A line that only appears on a mismatch is one
@@ -369,7 +370,7 @@ class TestMeasuredSize:
         result = promote(run_dir, bundle, champion_dir=champion, ledger=tmp_path / "L.md")
 
         assert result.startswith("PROMOTED"), result
-        card = json.loads((champion / "champion.json").read_text())
+        card = json.loads((champion / "champion.json").read_text(encoding="utf-8"))
         assert card["size_kb"] == 21.0
 
     def test_an_empty_file_is_refused(self, tmp_path: Path) -> None:
@@ -444,7 +445,7 @@ class TestMeasuredSize:
         champion = tmp_path / "c"
         promote(run_dir, shipped, champion_dir=champion, ledger=tmp_path / "L.md")
 
-        card = json.loads((champion / "champion.json").read_text())
+        card = json.loads((champion / "champion.json").read_text(encoding="utf-8"))
         assert card["size_kb"] == 8641 / 1024
         assert card["size_kb_reported"] == 4985 / 1024
 
@@ -517,7 +518,7 @@ class TestCandidateIsNamed:
 
         promote(run_dir, artifact, champion_dir=champion, ledger=tmp_path / "L.md")
 
-        card = json.loads((champion / "champion.json").read_text())
+        card = json.loads((champion / "champion.json").read_text(encoding="utf-8"))
         assert card["variant"] == "conv-raw-chars-int8"
         assert card["artifact"] == "conv-raw-chars-int8.onnx"
 
@@ -541,7 +542,7 @@ class TestCandidateIsNamed:
 
         assert result.startswith("PROMOTED"), result
         assert "variant 'unnamed'" in result
-        card = json.loads((champion / "champion.json").read_text())
+        card = json.loads((champion / "champion.json").read_text(encoding="utf-8"))
         assert card["variant"] == "unnamed"
 
     def test_without_an_artifact_it_says_so(self, tmp_path: Path) -> None:

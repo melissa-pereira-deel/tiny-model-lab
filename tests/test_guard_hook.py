@@ -60,7 +60,7 @@ def empty_project(tmp_path: Path) -> Path:
 def scoped_project(tmp_path: Path) -> Path:
     """A project directory that has been through /scope."""
     (tmp_path / SPEC_DIR.name).mkdir()
-    (tmp_path / SPEC_DIR.name / "tagger.yaml").write_text("task: t\n")
+    (tmp_path / SPEC_DIR.name / "tagger.yaml").write_text("task: t\n", encoding="utf-8")
     return tmp_path
 
 
@@ -86,7 +86,7 @@ def spiked_project(tmp_path: Path) -> Path:
     """
     (tmp_path / SPEC_DIR.name).mkdir()
     (tmp_path / SPEC_DIR.name / "tagger.spike.md").write_text(
-        "---\nquestion: q\ninforms: scope\n---\n"
+        "---\nquestion: q\ninforms: scope\n---\n", encoding="utf-8"
     )
     return tmp_path
 
@@ -156,7 +156,7 @@ def test_a_spike_record_alongside_a_contract_changes_nothing(
     scoped_project: Path,
 ) -> None:
     """The other direction: it does not *lock* anything either."""
-    (scoped_project / SPEC_DIR.name / "tagger.spike.md").write_text("---\nquestion: q\n---\n")
+    (scoped_project / SPEC_DIR.name / "tagger.spike.md").write_text("---\nquestion: q\n---\n", encoding="utf-8")
     assert not run_guard(TRAINING_COMMAND, scoped_project)
 
 

@@ -129,7 +129,10 @@ class TestTheLegacyContract:
         the form in is having a different conversation, and `validate` is
         where it belongs."""
         legacy = project / "experiments" / "experiment.yaml"
-        legacy.write_text(SHIPPED_TEMPLATE.read_text() + "\n# mine now\n")
+        legacy.write_text(
+            SHIPPED_TEMPLATE.read_text(encoding="utf-8") + "\n# mine now\n",
+            encoding="utf-8",
+        )
 
         actions = "\n".join(scaffold(project))
 
