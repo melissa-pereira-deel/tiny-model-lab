@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from harness.experiment import TARGETS
 from harness.validate import validate
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -254,3 +255,57 @@ class TestMetricDirection:
         assert validate(write_experiment(tmp_path, baseline__metric="score")) == []
         problems = validate(write_experiment(tmp_path, baseline__metric="perplexity"))
         assert any("reads the metric's name" in p for p in problems)
+
+
+class TestTarget:
+    """#36. `target` was documented as a list and checked against nothing.
+
+    `rust-wasm` validated, and so did `banana`. Worse, a non-neural artifact
+    had no true value to write: every documented option named a weights
+    format, so the honest answer for a bundled count table did not exist.
+    """
+
+    def test_an_unknown_target_is_rejected(self, tmp_path: Path) -> None:
+        problems = validate(write_experiment(tmp_path, target="rust-wasm"))
+        assert any("unknown target 'rust-wasm'" in p for p in problems)
+
+    def test_message_names_every_allowed_value(self, tmp_path: Path) -> None:
+        """The message's job is to say what to write instead, so a reword must
+        not drop any of the list."""
+        problems = validate(write_experiment(tmp_path, target="banana"))
+        [message] = [p for p in problems if "target" in p]
+        for allowed in TARGETS:
+            assert allowed in message
+
+    @pytest.mark.parametrize("target", TARGETS)
+    def test_every_allowed_target_is_accepted(self, tmp_path: Path, target: str) -> None:
+        assert validate(write_experiment(tmp_path, target=target)) == []
+
+    def test_json_inline_is_one_of_them(self) -> None:
+        """The value the issue asked for: an artifact bundled as data, not
+        exported as weights. Pinned so the list cannot quietly lose it."""
+        assert "json-inline" in TARGETS
+
+    def test_the_template_default_is_allowed(self) -> None:
+        """The template is deliberately invalid, but not because of this field.
+        A blank form whose default target fails would teach people to ignore
+        the target message along with the others."""
+        template = REPO_ROOT / "harness" / "templates" / "experiment.yaml"
+        raw = yaml.safe_load(template.read_text(encoding="utf-8"))
+        assert raw["target"] in TARGETS
+        assert not any("target" in p for p in validate(template))
+
+    def test_the_template_comment_lists_exactly_targets(self) -> None:
+        """The comment is what a person filling the form reads. It names the
+        same values as the tuple, in the same order, or it has drifted."""
+        template = REPO_ROOT / "harness" / "templates" / "experiment.yaml"
+        [line] = [
+            ln for ln in template.read_text(encoding="utf-8").splitlines()
+            if ln.startswith("target:")
+        ]
+        listed = tuple(v.strip() for v in line.split("#", 1)[1].split("|"))
+        assert listed == TARGETS
+
+    def test_an_omitted_target_defaults_to_an_allowed_one(self, tmp_path: Path) -> None:
+        """MINIMAL has no `target` key, so this is also every existing test above."""
+        assert validate(write_experiment(tmp_path)) == []

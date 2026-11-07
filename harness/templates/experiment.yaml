@@ -35,7 +35,12 @@ budgets:
   max_wallclock_minutes: 600
   patience_evals: 5        # evals without strict improvement before stopping
 
-target: onnx-web           # onnx-web | coreml | tflite | wgsl | mlx-local
+target: onnx-web           # onnx-web | coreml | tflite | wgsl | mlx-local | json-inline
+                           # The list is TARGETS in harness/experiment.py, and
+                           # validate refuses anything not on it. The first five
+                           # export weights; json-inline means the artifact is
+                           # bundled as data (e.g. a JSON count table), not
+                           # exported as weights.
 
 dataset:
   source: ""               # deterministic teacher | large-model | hand

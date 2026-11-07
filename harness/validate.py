@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .experiment import LATENCY_BANDS_MS, Experiment
+from .experiment import LATENCY_BANDS_MS, TARGETS, Experiment
 
 # Names that mean "random split", however they are spelled. Deliberately short
 # and openly incomplete: the check reads a label, not a split, so it can never
@@ -112,6 +112,14 @@ def validate(path: str | Path) -> list[str]:
         problems.append("hypothesis is too vague to falsify — write a sentence")
     if exp.budgets.latency_band not in LATENCY_BANDS_MS:
         problems.append(f"unknown latency_band {exp.budgets.latency_band!r}")
+    if exp.target not in TARGETS:
+        problems.append(
+            f"unknown target {exp.target!r} — must be one of {', '.join(TARGETS)}. "
+            "The first five export weights; json-inline means the artifact is "
+            "bundled as data (a JSON count table, a lookup) and nothing is exported. "
+            "This check reads the name, not the artifact, so it cannot tell whether "
+            "what you ship is in the format you declared."
+        )
     problems.extend(_dataset_problems(exp.dataset))
     return problems
 
