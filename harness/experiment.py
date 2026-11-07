@@ -58,6 +58,20 @@ LATENCY_BANDS_MS = {
 }
 
 
+# Where the artifact goes, and in what form. The one list: the template comment,
+# `Experiment.target` and `validate` all point here, so a new target is one
+# edit rather than three that drift.
+#
+# Five of these name an export format for weights. `json-inline` does not: it
+# means the artifact is bundled into the product as data -- a JSON count table,
+# a lookup, a set of profiles -- and no weights are exported at all. It exists
+# because a non-neural artifact otherwise had no honest value to write here.
+#
+# `validate` checks the name against this list, not the artifact against the
+# name. Nothing opens the file to confirm it is in the declared format.
+TARGETS = ("onnx-web", "coreml", "tflite", "wgsl", "mlx-local", "json-inline")
+
+
 # Fragments that mean "lower is better", however the metric is spelled.
 # Deliberately short and openly incomplete, in the same spirit as
 # RANDOM_SPLIT_NAMES in validate.py: this reads a name, not a metric, so it can
@@ -182,7 +196,7 @@ class Experiment:
     hypothesis: str
     baseline: Baseline
     budgets: Budgets
-    target: str = "onnx-web"  # onnx-web | coreml | tflite | wgsl | mlx-local
+    target: str = "onnx-web"  # one of TARGETS; `validate` refuses anything else
     dataset: dict[str, Any] = field(default_factory=dict)
     architecture: dict[str, Any] = field(default_factory=dict)
     kill_criteria: list[str] = field(default_factory=list)

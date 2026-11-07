@@ -65,6 +65,25 @@ remediation is a `Changed`.
   the bytes are real. The gate now says so in its own output rather than
   printing `artifact 1.0 KB` about a file it never opened.
 
+- `validate` refuses a `target` that is not in `TARGETS`, a new tuple in
+  `harness/experiment.py`, and the message lists the allowed values. The list
+  is the five the template and `Experiment.target` already documented —
+  `onnx-web`, `coreml`, `tflite`, `wgsl`, `mlx-local` — plus a new
+  **`json-inline`**: the artifact is bundled into the product as data (a JSON
+  count table, say), not exported as weights. Previously nothing compared the
+  field to anything, so `target: rust-wasm` and `target: banana` validated, and
+  a non-neural artifact had no true value to write at all — every option named
+  a weights format. The README advertised the first half as a feature. The
+  template comment and the field comment now point at `TARGETS`, so the list
+  lives in one place. Strictly stricter: a contract that validated can now
+  fail, and #36.
+
+  **This invalidates nothing in-tree.** Both examples declare `onnx-web`, and
+  `experiments/` holds no contracts. Like the split check, it reads a name, not
+  an artifact: nothing confirms that what ships is in the declared format.
+  Only `validate` refuses; `Experiment.from_dict` does not, so an old manifest
+  with an unlisted target still loads and can still be re-gated.
+
 ### Added
 
 - The spike — `harness/spike.py` and `harness/templates/spike.md`. A spike is

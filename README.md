@@ -215,7 +215,7 @@ Three different answers, and the README used to blur them.
 |---|---|
 | **The five gates** | Five numbers. `run_all` takes floats and a sequence of floats; `gates.py` imports nothing outside the standard library and this package |
 | **Size measurement** | `stat()` and a division. It measures a `.wasm`, a Swift binary and an `.mlpackage` identically, because it never opens the file — which is why promotion can afford to run it on anything |
-| **Promotion** | Copies a file or a directory, having measured its bytes and re-run the size gate on them. That is the only thing it inspects: the `target` field is not even validated — write `rust-wasm` and everything still runs |
+| **Promotion** | Copies a file or a directory, having measured its bytes and re-run the size gate on them. That is the only thing it inspects. `validate` checks the `target` field against a fixed list (`TARGETS` in `harness/experiment.py`, including `json-inline` for an artifact bundled as data rather than exported as weights) and refuses anything else — but it checks the name, not the file, so nothing confirms the artifact is in the format you declared |
 | **Latency** | `latency_ms` times a *Python callable* — the one real boundary. But `latency_gate` takes a bare float, so measure p95 in your own runtime and hand the number over |
 | **The workflow layer** | Claude Code. `AGENTS.md` is already vendor-neutral and the skills are plain Markdown, so the doctrine ports even where the tooling doesn't |
 | **The training guard** | bash. On Windows it is silently absent — the test skips rather than fails |
