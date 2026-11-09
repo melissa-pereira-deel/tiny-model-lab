@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .experiment import LATENCY_BANDS_MS, Experiment, eval_history, load_run
+from .experiment import LATENCY_BANDS_MS, TARGETS, Experiment, eval_history, load_run
 
 
 @dataclass
@@ -133,22 +133,72 @@ def size_gate(experiment: Experiment, actual_kb: float) -> GateResult:
     It names the target rather than carrying a table of which widths each export
     path supports. That table is framework knowledge, it changes, and a sensor
     that has to be kept current is not one you can trust.
+
+    That ladder is for weights, and the remediation branches on the declared
+    target to say so (#37): a `json-inline` count table has nothing to quantize
+    and no width, so it gets the table ladder instead. Only the text branches.
+    Pass/fail is `actual_kb <= cap` for every target, because a byte budget
+    means the same thing for a table and a tensor.
     """
     cap = experiment.budgets.max_size_kb
     return GateResult(
         name="size",
         passed=actual_kb <= cap,
         detail=f"artifact {actual_kb:.1f} KB vs budget {cap:.1f} KB",
-        remediation=(
-            f"Over budget by {actual_kb - cap:.1f} KB. Try in order: "
+        remediation=_size_remediation(experiment.target, actual_kb - cap),
+    )
+
+
+# Which ladder the size gate's remediation gives, by the kind of artifact a
+# target ships. Every name in TARGETS is in exactly one of these, and
+# tests/test_gates.py holds them to that: a target added to TARGETS without a
+# decision here fails a test, rather than quietly inheriting one ladder's advice.
+WEIGHT_TARGETS = frozenset({"onnx-web", "coreml", "tflite", "wgsl", "mlx-local"})
+TABLE_TARGETS = frozenset({"json-inline"})
+
+_RECHECK = "Re-run the baseline gate after each -- compression that breaks accuracy is not a win."
+
+
+def _size_remediation(target: str, over_kb: float) -> str:
+    """What to try when the artifact is over budget, for the artifact it is.
+
+    Weights keep the ladder `quantization-strategy` states, word for word. A
+    table gets #37's: drop rare rows, shorten the context, shrink the alphabet --
+    pruning first rather than last, and meaning rows rather than weights. A
+    target this gate does not know gets both, labelled by artifact kind, since
+    guessing which one applies is the improvisation a remediation is there to
+    prevent.
+    """
+    over = f"Over budget by {over_kb:.1f} KB. "
+    if target in WEIGHT_TARGETS:
+        return over + (
+            "Try in order: "
             "post-training quantization to int8 -- minutes, usually near-lossless, "
             "and the one width every export path supports; then quantization-aware "
             "training below 8 bits, though confirm the target you declared "
-            f"({experiment.target}) has a format for that width before you spend a "
-            "retrain reaching it; then width reduction; then pruning. Re-run the "
-            "baseline gate after each -- compression that breaks accuracy is not a win."
-        ),
-    )
+            f"({target}) has a format for that width before you spend a "
+            "retrain reaching it; then width reduction; then pruning. "
+        ) + _RECHECK
+    if target in TABLE_TARGETS:
+        return over + (
+            f"The target you declared ({target}) ships a table bundled as data, so "
+            "there are no weights to quantize and no width to reduce. Try in order: "
+            "prune rows whose count is below a threshold -- rows, not weights; then "
+            "back off to a lower n-gram order; then cap the vocabulary, folding rare "
+            "symbols into one out-of-vocabulary entry. "
+        ) + _RECHECK
+    weights = ", ".join(t for t in TARGETS if t in WEIGHT_TARGETS)
+    tables = ", ".join(t for t in TARGETS if t in TABLE_TARGETS)
+    return over + (
+        f"The target you declared ({target}) is not one this gate knows -- `validate` "
+        "would refuse it -- so it cannot tell which kind of artifact this is. Use the "
+        f"ladder for what you are shipping. Exported weights ({weights}): post-training "
+        "quantization to int8, then quantization-aware training below 8 bits if the "
+        "export path has a format for that width, then width reduction, then pruning. "
+        f"A table bundled as data ({tables}): prune rows below a count threshold, then "
+        "back off to a lower n-gram order, then cap the vocabulary. Then declare a target "
+        "from TARGETS in harness/experiment.py, so the next failure names one ladder. "
+    ) + _RECHECK
 
 
 def latency_gate(experiment: Experiment, p95_ms: float) -> GateResult:
