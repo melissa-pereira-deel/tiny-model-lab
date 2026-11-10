@@ -86,6 +86,25 @@ remediation is a `Changed`.
 
 ### Added
 
+- The run manifest records `git_dirty` beside `git_sha` (#38): `true` when
+  `git status --porcelain` printed anything, `false` when it printed nothing,
+  and `null` when it could not be asked — no git, not a repository, or a call
+  that failed. `git_sha` names the last commit and says nothing about the
+  working tree, so a run started with an uncommitted edit to its contract,
+  runner or model recorded the sha of code that did not run, in a manifest
+  identical to one from a clean tree. That is the hole in *the contract
+  predates the run*. The champion card copies the field beside its `git_sha`;
+  a manifest written before this has no field and promotes with `null`.
+
+  **No gate reads it, and nothing is refused.** Declining to promote from a
+  dirty tree would be the strict reading, and it would be a `Gate semantics`
+  change in its own right, so it is left to a separate one. Nothing is
+  filtered either: an untracked file is dirty, and so is an edit to
+  `runs/SESSIONS.md`. Deciding which differences do not count is a rule, and
+  this records a fact. It is never `false` by default — guessing clean is the
+  one answer that would make the field worse than its absence, which is why
+  `tests/test_provenance.py` asks a real git about real repositories, and
+  pins that a clean tree with git off the `PATH` still reads `null`.
 - The spike — `harness/spike.py` and `harness/templates/spike.md`. A spike is
   the measurement that gives a contract field its value, or that decides
   whether a contract should be written at all; the record is

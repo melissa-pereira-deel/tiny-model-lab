@@ -237,6 +237,10 @@ def promote(
         "promoted_at": datetime.now(timezone.utc).isoformat(),
         "run_id": manifest["run_id"],
         "git_sha": manifest["git_sha"],
+        # Carried, not checked: no gate reads it (#38). `.get` because a
+        # manifest written before the field existed cannot say, and null --
+        # unknown -- is the honest reading of that, not false.
+        "git_dirty": manifest.get("git_dirty"),
         "task": manifest["experiment"]["task"],
         "artifact": dest.name,
         # Beside the filename on purpose. The card is the only surviving record

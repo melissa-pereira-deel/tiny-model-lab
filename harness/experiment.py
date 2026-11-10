@@ -242,6 +242,35 @@ def _git_sha() -> str:
         return "unknown"
 
 
+def _git_dirty() -> bool | None:
+    """Did the working tree differ from `HEAD` when this was asked?
+
+    `_git_sha()` names the last commit, which says nothing about whether the
+    code that ran *is* that commit. A run started with an uncommitted edit to
+    the contract, the runner or the model records a sha describing code that
+    did not run, so this goes beside it (#38).
+
+    Any output from `git status --porcelain` is dirty -- a modified tracked
+    file, a staged change, an untracked file. Nothing is filtered: deciding
+    which differences do not count is a rule, and rules belong in a gate.
+
+    `None` means *could not tell*, and it is never `False`: no git, not a
+    repository, or a call that failed for any other reason. Guessing clean is
+    the one answer this must not give, because clean is the claim a reader
+    leans on. Same directory as `_git_sha()`, so the two describe one tree.
+    """
+    try:
+        status = subprocess.check_output(
+            ["git", "status", "--porcelain"],
+            cwd=project_root(),
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+    except Exception:  # noqa: BLE001 - no git, no repo, failed call: unknown, not clean
+        return None
+    return bool(status.strip())
+
+
 def start_run(experiment: Experiment, runs_dir: Path | None = None) -> Path:
     """Create a timestamped run directory with a provenance manifest.
 
@@ -258,6 +287,8 @@ def start_run(experiment: Experiment, runs_dir: Path | None = None) -> Path:
         "run_id": run_dir.name,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "git_sha": _git_sha(),
+        # Whether the tree matched that sha: true, false, or null for unknown.
+        "git_dirty": _git_dirty(),
         "experiment": experiment.to_dict(),
         "status": "running",
         "evals": [],
