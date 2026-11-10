@@ -1,11 +1,15 @@
 """Tests for the gates. These encode the rules the harness is actually for."""
 
+import re
 from dataclasses import asdict
 
 import pytest
 
-from harness.experiment import Baseline, Budgets, Experiment
+from harness.experiment import TARGETS, Baseline, Budgets, Experiment
 from harness.gates import (
+    TABLE_TARGETS,
+    WEIGHT_TARGETS,
+    GateResult,
     baseline_gate,
     latency_gate,
     patience_gate,
@@ -121,6 +125,117 @@ class TestSizeGate:
         for target in ("onnx-web", "coreml", "wgsl"):
             text = size_gate(make_experiment(max_size_kb=50, target=target), 90.0).remediation
             assert target in text
+
+
+def size_gate_before_37(experiment: Experiment, actual_kb: float) -> GateResult:
+    """`size_gate` exactly as it was at 1d7042f, before the text branched (#37).
+
+    Frozen here so "identical to before" is a comparison against the old code
+    rather than against someone's memory of it. Do not update it to match the
+    gate; if the gate's arithmetic has to change, that is a `Gate semantics`
+    entry and this reference should be deleted with an explanation, not edited.
+    """
+    cap = experiment.budgets.max_size_kb
+    return GateResult(
+        name="size",
+        passed=actual_kb <= cap,
+        detail=f"artifact {actual_kb:.1f} KB vs budget {cap:.1f} KB",
+        remediation=(
+            f"Over budget by {actual_kb - cap:.1f} KB. Try in order: "
+            "post-training quantization to int8 -- minutes, usually near-lossless, "
+            "and the one width every export path supports; then quantization-aware "
+            "training below 8 bits, though confirm the target you declared "
+            f"({experiment.target}) has a format for that width before you spend a "
+            "retrain reaching it; then width reduction; then pruning. Re-run the "
+            "baseline gate after each -- compression that breaks accuracy is not a win."
+        ),
+    )
+
+
+# (budget, measured) pairs: under, exactly at, a hair over, well over, the
+# rounding edges of `.1f`, and #24's 4 MB-against-50 KB.
+SIZE_CASES = [
+    (50, 27.5), (50, 50.0), (50, 50.04), (50, 50.05), (50, 50.1), (50, 90.0),
+    (5, 0.7), (0.5, 0.54), (50, 3906.25), (0, 0.0), (0, 0.01),
+]
+EVERY_TARGET = (*TARGETS, "rust-wasm")  # plus one `validate` would refuse
+
+OVER_BY = re.compile(r"^Over budget by (-?\d+\.\d) KB\. ")
+
+
+class TestSizeGateRemediationByArtifact:
+    """#37: the remediation branches on what the target ships. Nothing else does."""
+
+    def remediation(self, target: str) -> str:
+        return size_gate(make_experiment(max_size_kb=50, target=target), 90.0).remediation
+
+    def test_every_target_has_exactly_one_ladder(self):
+        """A new target forces a decision about which advice it gets."""
+        assert WEIGHT_TARGETS | TABLE_TARGETS == set(TARGETS)
+        assert not WEIGHT_TARGETS & TABLE_TARGETS
+
+    def test_onnx_web_keeps_the_weight_ladder_word_for_word(self):
+        assert self.remediation("onnx-web") == (
+            "Over budget by 40.0 KB. Try in order: post-training quantization to "
+            "int8 -- minutes, usually near-lossless, and the one width every export "
+            "path supports; then quantization-aware training below 8 bits, though "
+            "confirm the target you declared (onnx-web) has a format for that width "
+            "before you spend a retrain reaching it; then width reduction; then "
+            "pruning. Re-run the baseline gate after each -- compression that breaks "
+            "accuracy is not a win."
+        )
+
+    @pytest.mark.parametrize("target", sorted(WEIGHT_TARGETS))
+    def test_every_weight_target_is_unchanged(self, target):
+        exp = make_experiment(max_size_kb=50, target=target)
+        assert size_gate(exp, 90.0) == size_gate_before_37(exp, 90.0)
+
+    def test_json_inline_gets_the_table_ladder_in_order(self):
+        text = self.remediation("json-inline")
+        steps = ("prune rows", "lower n-gram order", "cap the vocabulary")
+        for step in steps:
+            assert step in text
+        assert [text.index(s) for s in steps] == sorted(text.index(s) for s in steps)
+        assert "(json-inline)" in text
+        assert "baseline gate" in text
+
+    def test_json_inline_names_no_move_a_table_cannot_make(self):
+        """Three of the four weight moves do not exist for a count table."""
+        text = self.remediation("json-inline")
+        for absent in ("quantization", "int8", "8 bits", "width reduction", "retrain"):
+            assert absent not in text
+
+    def test_an_unknown_target_gets_both_ladders_by_kind(self):
+        text = self.remediation("rust-wasm")
+        assert "(rust-wasm)" in text
+        assert "validate" in text
+        assert "Exported weights (onnx-web, coreml, tflite, wgsl, mlx-local)" in text
+        assert "A table bundled as data (json-inline)" in text
+        assert "post-training quantization to int8" in text
+        assert "prune rows below a count threshold" in text
+        assert "TARGETS" in text
+
+    @pytest.mark.parametrize("target", EVERY_TARGET)
+    def test_every_remediation_is_ascii(self, target):
+        """Gate output is printed on consoles that cannot take anything else."""
+        assert self.remediation(target).isascii()
+
+
+class TestSizeGateArithmeticIsUnchanged:
+    """The text branched; the decision and the number it reports did not."""
+
+    @pytest.mark.parametrize("target", EVERY_TARGET)
+    @pytest.mark.parametrize(("budget", "measured"), SIZE_CASES)
+    def test_pass_fail_detail_and_overage_match_the_old_gate(self, target, budget, measured):
+        exp = make_experiment(max_size_kb=budget, target=target)
+        new, old = size_gate(exp, measured), size_gate_before_37(exp, measured)
+
+        assert new.name == old.name
+        assert new.passed is old.passed
+        assert new.passed is (measured <= budget)
+        assert new.detail == old.detail
+        assert OVER_BY.match(new.remediation).group(1) == OVER_BY.match(old.remediation).group(1)
+        assert OVER_BY.match(new.remediation).group(1) == f"{measured - budget:.1f}"
 
 
 class TestLatencyGate:

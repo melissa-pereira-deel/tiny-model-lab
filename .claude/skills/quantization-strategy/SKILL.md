@@ -1,11 +1,13 @@
 ---
 name: quantization-strategy
-description: Decide between post-training quantization and quantization-aware training, pick a bit width, and compress a model to fit a size budget without silently destroying accuracy. Use when a model is over its size budget, when targeting sub-8-bit weights, or before any export to a browser or embedded target.
+description: Decide between post-training quantization and quantization-aware training, pick a bit width, and compress a model to fit a size budget without silently destroying accuracy. Use when a model with weights is over its size budget, when targeting sub-8-bit weights, or before any export to a browser or embedded target. Not for a `json-inline` artifact, which has no weights.
 ---
 
 # Quantization strategy
 
 Quantization is storing weights at lower precision. Think of it as choosing how many decimal places to keep: at some point the number is still useful, and a little past that it is not.
+
+**This is for artifacts with weights.** A `json-inline` target ships a table bundled as data — a count table, say — and has nothing to quantize and no width to reduce. Its ladder lives in one place, the size gate's remediation in `harness/gates.py`, which gives it whenever the declared target is `json-inline`.
 
 ## The decision
 

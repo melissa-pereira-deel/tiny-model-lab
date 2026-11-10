@@ -274,6 +274,26 @@ remediation is a `Changed`.
   quantization-aware training, matching the `quantization-strategy` skill, and
   names the declared target rather than a fixed ladder of bit widths. Text only;
   the pass/fail arithmetic is unchanged.
+- The size gate's remediation branches on the declared `target` (#37). The
+  five weight targets — `onnx-web`, `coreml`, `tflite`, `wgsl`, `mlx-local` —
+  keep the ladder above word for word. `json-inline` gets a table's ladder:
+  prune rows below a count threshold, then back off to a lower n-gram order,
+  then cap the vocabulary. A target the gate does not know, which only an old
+  manifest or a hand-built `Experiment` can carry past `validate`, gets both
+  ladders labelled by artifact kind. Previously a count table over budget was
+  sent to int8 quantization, quantization-aware training and width reduction,
+  three moves that do not exist for it, and the one that does — pruning —
+  came last and meant weights. `AGENTS.md` and the `quantization-strategy`
+  skill no longer route every size budget to quantization.
+
+  **`Changed`, not `Gate semantics`:** only the text branches. `passed` is
+  still `actual_kb <= cap` for every target, the detail line and the
+  over-budget figure are unchanged, and no run that passed can fail or the
+  reverse. `tests/test_gates.py` pins that against a frozen copy of the old
+  gate across every target and the `.1f` rounding edges. `WEIGHT_TARGETS`
+  and `TABLE_TARGETS` in `harness/gates.py` classify every name in
+  `TARGETS`, and a test fails when a new target is added without a decision
+  about which advice it gets.
 - Packaging modernised: PEP 639 license metadata, `dynamic` version read from
   `harness.__version__`, an explicit ruff rule set and a `ruff>=0.16` floor.
 - CI runs on `actions/checkout@v7` and `actions/setup-python@v7`, off the

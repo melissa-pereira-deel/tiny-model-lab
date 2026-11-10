@@ -49,7 +49,7 @@ or stop. A new seed is not a structural change.
 | Should this be a model at all? | `.claude/skills/tiny-model-triage/` |
 | How to get labels | `.claude/skills/dataset-synthesis/` |
 | What architecture | `.claude/skills/architecture-selection/` |
-| Fitting a size budget | `.claude/skills/quantization-strategy/` |
+| Fitting a size budget | `.claude/skills/quantization-strategy/` for weights; a `json-inline` table has none, so follow the size gate's remediation |
 | Getting it into a product | `.claude/skills/export-pipeline/` |
 | Is the *feature* good? | `.claude/skills/design-eval/` |
 | Why the harness is shaped this way | `docs/harness-design.md` |
